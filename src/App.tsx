@@ -10,6 +10,7 @@ import Sidebar from "@/components/Sidebar";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Customers from "./pages/Customers";
+import CustomersTable from "./pages/CustomersTable";
 import CustomerDetail from "./pages/CustomerDetail";
 import NotFound from "./pages/NotFound";
 
@@ -47,6 +48,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/customers" element={<Customers />} />
+            <Route path="/customers-table" element={<CustomersTable />} />
             <Route path="/customers/:id" element={<CustomerDetail />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
