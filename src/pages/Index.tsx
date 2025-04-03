@@ -15,7 +15,7 @@ const Index = () => {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center auth-background">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-secondary/10">
       <div className="w-full max-w-md px-4 mb-12">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-primary">ClientChronicle</h1>
@@ -28,3 +28,4 @@ const Index = () => {
 };
 
 export default Index;
+
