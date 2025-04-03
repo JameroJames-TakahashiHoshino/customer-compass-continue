@@ -1,6 +1,16 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Session } from "@supabase/supabase-js";
+import { 
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
 import { 
   Select, 
   SelectContent, 
@@ -10,107 +20,89 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import CustomerCard, { CustomerType } from "@/components/CustomerCard";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Loader2 } from "lucide-react";
 
-// Mock customer data
-const mockCustomers: CustomerType[] = [
-  {
-    id: 1,
-    name: "John Smith",
-    email: "john@example.com",
-    phone: "(555) 123-4567",
-    status: "active",
-    lastContact: "2023-10-15",
-    company: "Tech Solutions Inc"
-  },
-  {
-    id: 2,
-    name: "Sarah Johnson",
-    email: "sarah@example.com",
-    phone: "(555) 987-6543",
-    status: "active",
-    lastContact: "2023-10-10",
-    company: "Design Masters"
-  },
-  {
-    id: 3,
-    name: "Michael Brown",
-    email: "michael@example.com",
-    phone: "(555) 456-7890",
-    status: "inactive",
-    lastContact: "2023-09-28"
-  },
-  {
-    id: 4,
-    name: "Emily Davis",
-    email: "emily@example.com",
-    phone: "(555) 789-0123",
-    status: "pending",
-    lastContact: "2023-10-05",
-    company: "Marketing Pros"
-  },
-  {
-    id: 5,
-    name: "David Wilson",
-    email: "david@example.com",
-    phone: "(555) 234-5678",
-    status: "active",
-    lastContact: "2023-10-12",
-    company: "Wilson Consulting"
-  },
-  {
-    id: 6,
-    name: "Jennifer Lee",
-    email: "jennifer@example.com",
-    phone: "(555) 876-5432",
-    status: "inactive",
-    lastContact: "2023-09-20"
-  }
-];
+interface CustomerType {
+  custno: string;
+  custname: string | null;
+  address: string | null;
+  payterm: string | null;
+}
 
 const Customers = () => {
   const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
   const [customers, setCustomers] = useState<CustomerType[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is authenticated
-    const authStatus = localStorage.getItem("isAuthenticated") === "true";
-    setIsAuthenticated(authStatus);
-    
-    if (!authStatus) {
-      navigate("/");
-    } else {
-      // Load customers (in a real app, this would be an API call)
-      setCustomers(mockCustomers);
-    }
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      
+      if (!session) {
+        navigate("/");
+        return;
+      }
+      
+      fetchCustomers();
+    };
+
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (!session) {
+        navigate("/");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
+  const fetchCustomers = async () => {
+    setLoading(true);
+    try {
+      let query = supabase
+        .from('customer')
+        .select('*');
+
+      if (searchTerm) {
+        query = query
+          .or(`custname.ilike.%${searchTerm}%,address.ilike.%${searchTerm}%,custno.ilike.%${searchTerm}%`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching customers:', error);
+        return;
+      }
+
+      setCustomers(data as CustomerType[]);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    // Filter customers based on search term and status filter
-    let filtered = [...mockCustomers];
-    
-    if (searchTerm) {
-      filtered = filtered.filter(
-        customer => 
-          customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (customer.company && customer.company.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
+    if (session) {
+      fetchCustomers();
     }
-    
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(customer => customer.status === statusFilter);
-    }
-    
-    setCustomers(filtered);
   }, [searchTerm, statusFilter]);
 
-  if (!isAuthenticated) {
-    return null;
+  if (loading && !customers.length) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (
@@ -135,36 +127,43 @@ const Customers = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Select
-          value={statusFilter}
-          onValueChange={setStatusFilter}
-        >
-          <SelectTrigger className="w-full md:w-[180px]">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
       
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {customers.length > 0 ? (
           customers.map(customer => (
-            <CustomerCard key={customer.id} customer={customer} />
+            <Card key={customer.custno}>
+              <CardHeader>
+                <CardTitle>{customer.custname || "Unnamed Customer"}</CardTitle>
+                <CardDescription>Customer #{customer.custno}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="text-sm">
+                    <span className="font-medium">Address: </span>
+                    {customer.address || "No address provided"}
+                  </div>
+                  <div className="text-sm">
+                    <span className="font-medium">Payment Terms: </span>
+                    {customer.payterm || "Not specified"}
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button variant="outline" className="w-full" onClick={() => navigate(`/customers/${customer.custno}`)}>
+                  View Details
+                </Button>
+              </CardFooter>
+            </Card>
           ))
         ) : (
           <div className="col-span-full flex h-[200px] w-full flex-col items-center justify-center rounded-lg border border-dashed">
             <p className="text-muted-foreground">No customers found</p>
-            {searchTerm || statusFilter !== "all" ? (
+            {searchTerm ? (
               <Button 
                 variant="link" 
                 onClick={() => {
                   setSearchTerm("");
-                  setStatusFilter("all");
                 }}
               >
                 Clear filters
