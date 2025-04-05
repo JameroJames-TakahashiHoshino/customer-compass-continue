@@ -1,69 +1,39 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import Navbar from "@/components/Navbar";
-import Sidebar from "@/components/Sidebar";
-import Index from "./pages/Index";
-import Dashboard from "./pages/Dashboard";
-import Customers from "./pages/Customers";
-import CustomersTable from "./pages/CustomersTable";
-import CustomerDetail from "./pages/CustomerDetail";
-import Payments from "./pages/Payments";
-import Sales from "./pages/Sales";
-import NotFound from "./pages/NotFound";
-import ResetPassword from "./pages/ResetPassword";
-import AdminLogin from "./pages/AdminLogin";
+import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
+import IndexPage from "@/pages/Index";
+import NotFound from "@/pages/NotFound";
+import Dashboard from "@/pages/Dashboard";
+import ResetPassword from "@/pages/ResetPassword";
+import AdminLogin from "@/pages/AdminLogin";
+import Customers from "@/pages/Customers";
+import CustomersTable from "@/pages/CustomersTable";
+import Sales from "@/pages/Sales";
+import Payments from "@/pages/Payments";
+import CustomerDetail from "@/pages/CustomerDetail";
+import DefaultLayout from "@/layouts/DefaultLayout";
 
-const queryClient = new QueryClient();
-
-const AppLayout = ({ children }: { children: React.ReactNode }) => {
-  const location = useLocation();
-  const isAuthPage = location.pathname === "/" || location.pathname === "/reset-password" || location.pathname === "/admin-login";
-
-  if (isAuthPage) {
-    return <>{children}</>;
-  }
-
+function App() {
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <Sidebar />
-        <div className="flex flex-col flex-1">
-          <Navbar />
-          <div className="flex-1">{children}</div>
-        </div>
-      </div>
-    </SidebarProvider>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Navigate to="/admin-login" replace />} />
+        <Route path="/index" element={<IndexPage />} />
+        <Route path="/admin-login" element={<AdminLogin />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        
+        <Route element={<DefaultLayout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/customers" element={<Customers />} />
+          <Route path="/customers-table" element={<CustomersTable />} />
+          <Route path="/customers/:id" element={<CustomerDetail />} />
+          <Route path="/sales" element={<Sales />} />
+          <Route path="/payments" element={<Payments />} />
+        </Route>
+        
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Router>
   );
-};
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner position="top-right" />
-      <BrowserRouter>
-        <AppLayout>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/admin-login" element={<AdminLogin />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/customers" element={<Customers />} />
-            <Route path="/customers-table" element={<CustomersTable />} />
-            <Route path="/customers/:id" element={<CustomerDetail />} />
-            <Route path="/payments" element={<Payments />} />
-            <Route path="/sales" element={<Sales />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AppLayout>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+}
 
 export default App;

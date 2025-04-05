@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { InteractionType } from "@/components/InteractionItem";
 import { ArrowRight, Plus, Users, BarChart3, Calendar, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
@@ -15,28 +14,19 @@ interface CustomerType {
   payterm: string | null;
 }
 
-const mockRecentInteractions: InteractionType[] = [
-  {
-    id: 1,
-    type: "call",
-    title: "Sales Call",
-    description: "Discussed new product offerings and pricing options.",
-    date: "2023-10-15T14:30:00",
-    user: {
-      name: "Demo User"
-    }
-  },
-  {
-    id: 2,
-    type: "meeting",
-    title: "Project Kickoff",
-    description: "Initial meeting to discuss project requirements and timeline.",
-    date: "2023-10-12T10:00:00",
-    user: {
-      name: "Demo User"
-    }
-  }
-];
+interface SalesType {
+  transno: string;
+  salesdate: string | null;
+  custno: string | null;
+  empno: string | null;
+}
+
+interface PaymentType {
+  orno: string;
+  paydate: string | null;
+  amount: number | null;
+  transno: string | null;
+}
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -44,6 +34,9 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [recentCustomers, setRecentCustomers] = useState<CustomerType[]>([]);
   const [customerCount, setCustomerCount] = useState(0);
+  const [salesCount, setSalesCount] = useState(0);
+  const [paymentCount, setPaymentCount] = useState(0);
+  const [recentActivity, setRecentActivity] = useState<(SalesType | PaymentType)[]>([]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -53,8 +46,7 @@ const Dashboard = () => {
       if (!session) {
         navigate("/");
       } else {
-        await fetchCustomers();
-        await fetchCustomerCount();
+        await fetchData();
       }
       
       setLoading(false);
@@ -74,39 +66,96 @@ const Dashboard = () => {
     };
   }, [navigate]);
 
-  const fetchCustomers = async () => {
+  const fetchData = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch recent customers
+      const { data: customersData, error: customersError } = await supabase
         .from('customer')
         .select('*')
         .limit(3)
         .order('custno', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching customers:', error);
-        return;
+      if (customersError) {
+        console.error('Error fetching customers:', customersError);
+      } else {
+        setRecentCustomers(customersData || []);
       }
 
-      setRecentCustomers(data || []);
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  };
-
-  const fetchCustomerCount = async () => {
-    try {
-      const { count, error } = await supabase
+      // Count customers
+      const { count: customerCount, error: countError } = await supabase
         .from('customer')
         .select('*', { count: 'exact', head: true });
 
-      if (error) {
-        console.error('Error counting customers:', error);
-        return;
+      if (countError) {
+        console.error('Error counting customers:', countError);
+      } else {
+        setCustomerCount(customerCount || 0);
       }
 
-      setCustomerCount(count || 0);
+      // Count sales
+      const { count: salesCount, error: salesCountError } = await supabase
+        .from('sales')
+        .select('*', { count: 'exact', head: true });
+
+      if (salesCountError) {
+        console.error('Error counting sales:', salesCountError);
+      } else {
+        setSalesCount(salesCount || 0);
+      }
+
+      // Count payments
+      const { count: paymentCount, error: paymentCountError } = await supabase
+        .from('payment')
+        .select('*', { count: 'exact', head: true });
+
+      if (paymentCountError) {
+        console.error('Error counting payments:', paymentCountError);
+      } else {
+        setPaymentCount(paymentCount || 0);
+      }
+
+      // Fetch recent activity (sales and payments combined)
+      const { data: recentSales, error: recentSalesError } = await supabase
+        .from('sales')
+        .select('*')
+        .limit(3)
+        .order('transno', { ascending: false });
+
+      const { data: recentPayments, error: recentPaymentsError } = await supabase
+        .from('payment')
+        .select('*')
+        .limit(3)
+        .order('orno', { ascending: false });
+
+      if (recentSalesError) {
+        console.error('Error fetching recent sales:', recentSalesError);
+      }
+      
+      if (recentPaymentsError) {
+        console.error('Error fetching recent payments:', recentPaymentsError);
+      }
+
+      // Combine and sort recent activity
+      const combinedActivity = [
+        ...(recentSales || []).map(sale => ({ ...sale, type: 'sale' })),
+        ...(recentPayments || []).map(payment => ({ ...payment, type: 'payment' }))
+      ];
+      
+      // Sort by date (most recent first)
+      const sortedActivity = combinedActivity.sort((a, b) => {
+        const dateA = a.type === 'sale' ? a.salesdate : a.paydate;
+        const dateB = b.type === 'sale' ? b.salesdate : b.paydate;
+        
+        if (!dateA) return 1;
+        if (!dateB) return -1;
+        
+        return new Date(dateB).getTime() - new Date(dateA).getTime();
+      }).slice(0, 5);
+      
+      setRecentActivity(sortedActivity);
+
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching data:', error);
     }
   };
 
@@ -146,22 +195,22 @@ const Dashboard = () => {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Contacts</CardTitle>
+            <CardTitle className="text-sm font-medium">Sales Transactions</CardTitle>
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{customerCount}</div>
-            <p className="text-xs text-muted-foreground">Customers with activity</p>
+            <div className="text-2xl font-bold">{salesCount}</div>
+            <p className="text-xs text-muted-foreground">Total sales records</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Upcoming Meetings</CardTitle>
+            <CardTitle className="text-sm font-medium">Payments</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">This week</p>
+            <div className="text-2xl font-bold">{paymentCount}</div>
+            <p className="text-xs text-muted-foreground">Total payment records</p>
           </CardContent>
         </Card>
         <Card>
@@ -170,8 +219,8 @@ const Dashboard = () => {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockRecentInteractions.length}</div>
-            <p className="text-xs text-muted-foreground">In the last 7 days</p>
+            <div className="text-2xl font-bold">{recentActivity.length}</div>
+            <p className="text-xs text-muted-foreground">In the last period</p>
           </CardContent>
         </Card>
       </div>
@@ -214,26 +263,58 @@ const Dashboard = () => {
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
             <CardDescription>
-              Latest interactions with your customers
+              Latest transactions and payments
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {mockRecentInteractions.map(interaction => (
-                <div key={interaction.id} className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <div className="font-medium">{interaction.title}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(interaction.date).toLocaleDateString()}
-                    </div>
-                  </div>
-                  <div className="text-sm">{interaction.description}</div>
-                </div>
-              ))}
+              {recentActivity.length > 0 ? (
+                recentActivity.map((activity, index) => {
+                  if ('salesdate' in activity) {
+                    // This is a sale
+                    return (
+                      <div key={`sale-${activity.transno}`} className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <div className="font-medium">Sale #{activity.transno}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {activity.salesdate ? new Date(activity.salesdate).toLocaleDateString() : 'No date'}
+                          </div>
+                        </div>
+                        <div className="text-sm">Customer: {activity.custno || 'Unknown'}</div>
+                      </div>
+                    );
+                  } else {
+                    // This is a payment
+                    return (
+                      <div key={`payment-${activity.orno}`} className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <div className="font-medium">Payment #{activity.orno}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {activity.paydate ? new Date(activity.paydate).toLocaleDateString() : 'No date'}
+                          </div>
+                        </div>
+                        <div className="text-sm">
+                          Amount: {activity.amount ? new Intl.NumberFormat('en-US', {
+                            style: 'currency',
+                            currency: 'USD'
+                          }).format(activity.amount) : 'Unknown'}
+                        </div>
+                      </div>
+                    );
+                  }
+                })
+              ) : (
+                <div className="text-center text-muted-foreground py-4">No recent activity</div>
+              )}
             </div>
-            <Button variant="outline" className="mt-4 w-full" asChild>
-              <Link to="/activity">View All Activity</Link>
-            </Button>
+            <div className="flex space-x-2 mt-4">
+              <Button variant="outline" className="flex-1" asChild>
+                <Link to="/sales">View All Sales</Link>
+              </Button>
+              <Button variant="outline" className="flex-1" asChild>
+                <Link to="/payments">View All Payments</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

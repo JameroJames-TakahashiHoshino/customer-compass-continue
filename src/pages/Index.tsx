@@ -1,73 +1,31 @@
 
-import AuthForm from "@/components/AuthForm";
-import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
-import { Shield } from "lucide-react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Link } from "react-router-dom";
+import AuthForm from "@/components/AuthForm";
+import { KeyRound, Shield } from "lucide-react";
 
-const Index = () => {
-  const navigate = useNavigate();
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Check current session
-    const checkSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      setSession(session);
-      
-      if (session) {
-        navigate("/dashboard");
-      }
-      
-      setLoading(false);
-    };
-
-    checkSession();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) {
-        navigate("/dashboard");
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
+export default function IndexPage() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-secondary/10">
-      <div className="w-full max-w-md px-4 mb-12">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-secondary/10 p-4">
+      <div className="max-w-md w-full space-y-6">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-primary">ClientChronicle</h1>
-          <p className="text-muted-foreground mt-2">Manage your clients with ease</p>
+          <h1 className="text-4xl font-extrabold tracking-tight">CRM Dashboard</h1>
+          <p className="text-lg text-muted-foreground mt-2">Manage your customers and transactions</p>
         </div>
+        
         <AuthForm />
         
-        <div className="mt-6 text-center">
+        <div className="text-center">
           <p className="text-sm text-muted-foreground mb-2">Are you an administrator?</p>
-          <Button variant="outline" asChild>
-            <Link to="/admin-login" className="flex items-center justify-center">
-              <Shield className="mr-2 h-4 w-4" /> Admin Login
+          <Button variant="outline" asChild className="w-full">
+            <Link to="/admin-login">
+              <Shield className="mr-2 h-4 w-4" />
+              Admin Login
             </Link>
           </Button>
         </div>
       </div>
     </div>
   );
-};
-
-export default Index;
+}

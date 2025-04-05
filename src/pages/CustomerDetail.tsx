@@ -15,6 +15,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { InteractionType } from "@/components/InteractionItem";
 import InteractionItem from "@/components/InteractionItem";
+import { 
+  Table, 
+  TableBody, 
+  TableCaption, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
 import { format } from "date-fns";
 import { ArrowLeft, Building, Calendar, Mail, MapPin, Phone, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,31 +39,19 @@ interface CustomerType {
   imageUrl?: string;
 }
 
-// Mock interactions
-const mockInteractions: Record<string, InteractionType[]> = {
-  "1": [
-    {
-      id: 1,
-      type: "call",
-      title: "Sales Call",
-      description: "Discussed new product offerings and pricing options.",
-      date: "2023-10-15T14:30:00",
-      user: {
-        name: "Demo User"
-      }
-    },
-    {
-      id: 2,
-      type: "email",
-      title: "Follow-up Email",
-      description: "Sent detailed information about the products discussed on the call along with pricing documents.",
-      date: "2023-10-16T09:15:00",
-      user: {
-        name: "Demo User"
-      }
-    }
-  ]
-};
+interface SalesType {
+  transno: string;
+  salesdate: string | null;
+  custno: string | null;
+  empno: string | null;
+}
+
+interface PaymentType {
+  orno: string;
+  paydate: string | null;
+  amount: number | null;
+  transno: string | null;
+}
 
 const statusColors = {
   active: "bg-green-100 text-green-800 hover:bg-green-200",
@@ -67,7 +64,8 @@ const CustomerDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [session, setSession] = useState<Session | null>(null);
   const [customer, setCustomer] = useState<CustomerType | null>(null);
-  const [interactions, setInteractions] = useState<InteractionType[]>([]);
+  const [customerSales, setCustomerSales] = useState<SalesType[]>([]);
+  const [customerPayments, setCustomerPayments] = useState<PaymentType[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -102,28 +100,55 @@ const CustomerDetail = () => {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // Fetch customer details
+      const { data: customerData, error: customerError } = await supabase
         .from('customer')
         .select('*')
         .eq('custno', id)
         .single();
 
-      if (error) {
-        console.error('Error fetching customer:', error);
+      if (customerError) {
+        console.error('Error fetching customer:', customerError);
         navigate("/customers");
         return;
       }
 
-      if (data) {
-        const customerData: CustomerType = {
-          ...data,
+      if (customerData) {
+        const enrichedCustomer: CustomerType = {
+          ...customerData,
           status: "active",
           lastContact: new Date().toISOString().split('T')[0]
         };
-        setCustomer(customerData);
+        setCustomer(enrichedCustomer);
         
-        // For now, use mock interactions
-        setInteractions(mockInteractions[id] || []);
+        // Fetch sales for this customer
+        const { data: salesData, error: salesError } = await supabase
+          .from('sales')
+          .select('*')
+          .eq('custno', id);
+          
+        if (salesError) {
+          console.error('Error fetching sales:', salesError);
+        } else {
+          setCustomerSales(salesData || []);
+          
+          // Fetch payments for the sales of this customer
+          if (salesData && salesData.length > 0) {
+            const transNumbers = salesData.map(sale => sale.transno);
+            
+            const { data: paymentsData, error: paymentsError } = await supabase
+              .from('payment')
+              .select('*')
+              .in('transno', transNumbers);
+              
+            if (paymentsError) {
+              console.error('Error fetching payments:', paymentsError);
+            } else {
+              setCustomerPayments(paymentsData || []);
+            }
+          }
+        }
       } else {
         navigate("/customers");
       }
@@ -142,6 +167,19 @@ const CustomerDetail = () => {
       .map(part => part.charAt(0))
       .join("")
       .toUpperCase();
+  };
+  
+  const formatCurrency = (amount: number | null) => {
+    if (amount === null) return "-";
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  };
+
+  const formatDate = (date: string | null) => {
+    if (!date) return "-";
+    return new Date(date).toLocaleDateString();
   };
 
   if (loading) {
@@ -241,54 +279,84 @@ const CustomerDetail = () => {
           </CardContent>
         </Card>
         
-        {/* Tabs for Interactions, Notes, etc. */}
+        {/* Tabs for Orders, Payments, etc. */}
         <div className="lg:col-span-2">
-          <Tabs defaultValue="interactions">
+          <Tabs defaultValue="orders">
             <TabsList className="w-full">
-              <TabsTrigger value="interactions" className="flex-1">Interactions</TabsTrigger>
-              <TabsTrigger value="orders" className="flex-1">Orders</TabsTrigger>
+              <TabsTrigger value="orders" className="flex-1">Sales</TabsTrigger>
+              <TabsTrigger value="payments" className="flex-1">Payments</TabsTrigger>
               <TabsTrigger value="notes" className="flex-1">Notes</TabsTrigger>
               <TabsTrigger value="files" className="flex-1">Files</TabsTrigger>
             </TabsList>
             
-            <TabsContent value="interactions" className="space-y-4 pt-4">
-              <div className="flex justify-between">
-                <h3 className="text-lg font-medium">Customer Interactions</h3>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Interaction
-                </Button>
-              </div>
+            <TabsContent value="orders" className="space-y-4 pt-4">
+              <h3 className="text-lg font-medium">Sales Records</h3>
               
-              {interactions.length > 0 ? (
-                <div className="space-y-4">
-                  {interactions.map(interaction => (
-                    <InteractionItem key={interaction.id} interaction={interaction} />
-                  ))}
+              {customerSales.length > 0 ? (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableCaption>List of sales transactions for this customer</TableCaption>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Transaction No</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Employee</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {customerSales.map((sale) => (
+                        <TableRow key={sale.transno}>
+                          <TableCell className="font-medium">{sale.transno}</TableCell>
+                          <TableCell>{formatDate(sale.salesdate)}</TableCell>
+                          <TableCell>{sale.empno || "-"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               ) : (
                 <Card>
                   <CardContent className="flex flex-col items-center justify-center p-6">
-                    <p className="mb-2 text-center text-muted-foreground">No interactions recorded yet</p>
-                    <Button>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add First Interaction
-                    </Button>
+                    <p className="mb-2 text-center text-muted-foreground">No sales records found for this customer</p>
                   </CardContent>
                 </Card>
               )}
             </TabsContent>
             
-            <TabsContent value="orders">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Orders</CardTitle>
-                  <CardDescription>Customer's order history</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-center text-muted-foreground py-8">No orders found for this customer</p>
-                </CardContent>
-              </Card>
+            <TabsContent value="payments" className="space-y-4 pt-4">
+              <h3 className="text-lg font-medium">Payment History</h3>
+              
+              {customerPayments.length > 0 ? (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableCaption>List of payments made by this customer</TableCaption>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>OR Number</TableHead>
+                        <TableHead>Payment Date</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Transaction</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {customerPayments.map((payment) => (
+                        <TableRow key={payment.orno}>
+                          <TableCell className="font-medium">{payment.orno}</TableCell>
+                          <TableCell>{formatDate(payment.paydate)}</TableCell>
+                          <TableCell>{formatCurrency(payment.amount)}</TableCell>
+                          <TableCell>{payment.transno || "-"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center p-6">
+                    <p className="mb-2 text-center text-muted-foreground">No payment records found for this customer</p>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
             
             <TabsContent value="notes">
