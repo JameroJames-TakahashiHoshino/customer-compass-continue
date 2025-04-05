@@ -1,6 +1,7 @@
 
 import { Home, CreditCard, Users, Settings, Table, Receipt } from "lucide-react";
-import { SidebarItem } from "./Sidebar";
+import { SidebarMenuItem, SidebarMenuButton } from "./ui/sidebar";
+import { NavLink } from "react-router-dom";
 
 export function SidebarLinks() {
   return (
@@ -20,4 +21,21 @@ export function SidebarLinks() {
       </div>
     </div>
   )
+}
+
+// Create a SidebarItem component that uses the sidebar components
+function SidebarItem({ to, title, icon: Icon }) {
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild>
+        <NavLink
+          to={to}
+          className={({ isActive }) => isActive ? "text-primary" : ""}
+        >
+          <Icon className="h-4 w-4 mr-2" />
+          <span>{title}</span>
+        </NavLink>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
 }

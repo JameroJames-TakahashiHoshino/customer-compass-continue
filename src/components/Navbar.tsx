@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,7 +25,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { toast } from "sonner";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Session } from "@supabase/supabase-js";
 
 // Admin credentials - in a real app these would be stored in a database
@@ -35,7 +34,7 @@ const ADMIN_EMAILS = ["admin@example.com", "superadmin@example.com"];
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   const [session, setSession] = useState<Session | null>(null);
   const [userEmail, setUserEmail] = useState<string>("");
   const [unreadNotifications, setUnreadNotifications] = useState(3);
