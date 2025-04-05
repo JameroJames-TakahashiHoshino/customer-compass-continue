@@ -12,14 +12,17 @@ import Dashboard from "./pages/Dashboard";
 import Customers from "./pages/Customers";
 import CustomersTable from "./pages/CustomersTable";
 import CustomerDetail from "./pages/CustomerDetail";
+import Payments from "./pages/Payments";
+import Sales from "./pages/Sales";
 import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
+import AdminLogin from "./pages/AdminLogin";
 
 const queryClient = new QueryClient();
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
-  const isAuthPage = location.pathname === "/" || location.pathname === "/reset-password";
+  const isAuthPage = location.pathname === "/" || location.pathname === "/reset-password" || location.pathname === "/admin-login";
 
   if (isAuthPage) {
     return <>{children}</>;
@@ -48,10 +51,13 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/customers" element={<Customers />} />
             <Route path="/customers-table" element={<CustomersTable />} />
             <Route path="/customers/:id" element={<CustomerDetail />} />
+            <Route path="/payments" element={<Payments />} />
+            <Route path="/sales" element={<Sales />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AppLayout>

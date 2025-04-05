@@ -1,9 +1,11 @@
 
 import AuthForm from "@/components/AuthForm";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
+import { Button } from "@/components/ui/button";
+import { Shield } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -54,6 +56,15 @@ const Index = () => {
           <p className="text-muted-foreground mt-2">Manage your clients with ease</p>
         </div>
         <AuthForm />
+        
+        <div className="mt-6 text-center">
+          <p className="text-sm text-muted-foreground mb-2">Are you an administrator?</p>
+          <Button variant="outline" asChild>
+            <Link to="/admin-login" className="flex items-center justify-center">
+              <Shield className="mr-2 h-4 w-4" /> Admin Login
+            </Link>
+          </Button>
+        </div>
       </div>
     </div>
   );

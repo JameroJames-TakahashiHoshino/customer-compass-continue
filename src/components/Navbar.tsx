@@ -1,100 +1,63 @@
 
-import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { toast } from "sonner";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Search, Bell, User } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Session } from "@supabase/supabase-js";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  Bell,
+  LogOut,
+  Menu,
+  Settings,
+  User,
+  ShieldCheck,
+} from "lucide-react";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { toast } from "sonner";
+import { useMobile } from "@/hooks/use-mobile";
+import { Session } from "@supabase/supabase-js";
 
-interface Notification {
-  id: number;
-  title: string;
-  description: string;
-  time: string;
-  read: boolean;
-}
+// Admin credentials - in a real app these would be stored in a database
+const ADMIN_EMAILS = ["admin@example.com", "superadmin@example.com"];
 
-const mockNotifications: Notification[] = [
-  {
-    id: 1,
-    title: "New Customer Added",
-    description: "John Smith was added as a new customer",
-    time: "5 minutes ago",
-    read: false
-  },
-  {
-    id: 2,
-    title: "Meeting Reminder",
-    description: "You have a meeting with Sarah Johnson at 2:00 PM",
-    time: "1 hour ago",
-    read: false
-  },
-  {
-    id: 3,
-    title: "Task Completed",
-    description: "Michael Brown completed the assigned task",
-    time: "3 hours ago",
-    read: true
-  }
-];
-
-const Navbar = () => {
+export default function Navbar() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isMobile = useMobile();
   const [session, setSession] = useState<Session | null>(null);
-  const [userProfile, setUserProfile] = useState<{
-    name: string;
-    email: string;
-  }>({
-    name: "User",
-    email: "user@example.com"
-  });
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>("");
+  const [unreadNotifications, setUnreadNotifications] = useState(3);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    // Get current session
-    const getCurrentSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      
-      if (session?.user) {
-        const { email, user_metadata } = session.user;
-        setUserProfile({
-          name: user_metadata?.full_name || "User",
-          email: email || "user@example.com"
-        });
+    const getSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (data.session) {
+        setSession(data.session);
+        setUserEmail(data.session.user.email || "");
+        setIsAdmin(ADMIN_EMAILS.includes(data.session.user.email || ""));
       }
     };
-    
-    getCurrentSession();
 
-    // Set up auth state listener
+    getSession();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      
-      if (session?.user) {
-        const { email, user_metadata } = session.user;
-        setUserProfile({
-          name: user_metadata?.full_name || "User",
-          email: email || "user@example.com"
-        });
+      if (session) {
+        setUserEmail(session.user.email || "");
+        setIsAdmin(ADMIN_EMAILS.includes(session.user.email || ""));
       }
     });
 
@@ -103,153 +66,144 @@ const Navbar = () => {
     };
   }, []);
 
-  const handleLogout = async () => {
+  const getPageTitle = () => {
+    const path = location.pathname;
+    if (path === "/dashboard") return "Dashboard";
+    if (path === "/customers") return "Customers";
+    if (path === "/customers-table") return "Customers Table";
+    if (path === "/payments") return "Payments";
+    if (path === "/sales") return "Sales";
+    if (path.startsWith("/customers/")) return "Customer Details";
+    return "Dashboard";
+  };
+
+  const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
     
     if (error) {
-      toast.error("Error logging out");
+      toast.error("Error signing out");
       return;
     }
     
-    toast.success("Logged out successfully");
+    toast.success("Signed out successfully");
     navigate("/");
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map(part => part.charAt(0))
-      .join("")
-      .toUpperCase();
-  };
-
-  const markAsRead = (id: number) => {
-    setNotifications(notifications.map(notification => 
-      notification.id === id 
-        ? { ...notification, read: true } 
-        : notification
-    ));
-  };
-
   const markAllAsRead = () => {
-    setNotifications(notifications.map(notification => ({ ...notification, read: true })));
+    setUnreadNotifications(0);
     toast.success("All notifications marked as read");
   };
 
-  const unreadCount = notifications.filter(notification => !notification.read).length;
+  if (!session) {
+    return null;
+  }
+
+  const userInitials = userEmail ? userEmail.charAt(0).toUpperCase() : "U";
 
   return (
-    <header className="border-b">
-      <div className="flex h-16 items-center px-4 md:px-6">
-        <div className="flex items-center">
-          <SidebarTrigger className="mr-2" />
-          <Link to="/dashboard" className="flex items-center">
-            <span className="text-lg font-semibold tracking-tight text-primary">ClientChronicle</span>
-          </Link>
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-14 items-center">
+        <div className="mr-4 hidden md:flex">
+          <div className="font-bold mr-6 text-xl">{getPageTitle()}</div>
         </div>
-        <div className="ml-auto flex items-center space-x-4">
-          <form className="relative hidden md:block">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="w-60 bg-background pl-8"
-            />
-          </form>
-          
-          <Popover open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="icon" className="relative">
-                <Bell className="h-4 w-4" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center">
-                    {unreadCount}
-                  </span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 p-0" align="end">
-              <div className="flex items-center justify-between p-4 border-b">
-                <h3 className="font-medium">Notifications</h3>
-                {unreadCount > 0 && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={markAllAsRead}
-                  >
-                    Mark all as read
-                  </Button>
-                )}
-              </div>
-              <div className="max-h-[300px] overflow-auto">
-                {notifications.length === 0 ? (
-                  <div className="p-4 text-center text-muted-foreground">
-                    No notifications
-                  </div>
-                ) : (
-                  notifications.map((notification) => (
-                    <div
-                      key={notification.id}
-                      className={`p-4 border-b last:border-b-0 ${
-                        !notification.read ? "bg-secondary/20" : ""
-                      }`}
-                      onClick={() => markAsRead(notification.id)}
-                    >
-                      <div className="flex justify-between items-start mb-1">
-                        <h4 className="font-medium">{notification.title}</h4>
-                        <span className="text-xs text-muted-foreground">
-                          {notification.time}
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {notification.description}
-                      </p>
+        <Button variant="outline" size="icon" className="mr-2 md:hidden">
+          <Menu className="h-4 w-4" />
+          <span className="sr-only">Toggle Menu</span>
+        </Button>
+        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
+          <div className="w-full flex-1 md:w-auto md:flex-none">
+            {isMobile && <div className="font-bold">{getPageTitle()}</div>}
+          </div>
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="icon" className="relative">
+                  <Bell className="h-4 w-4" />
+                  {unreadNotifications > 0 && (
+                    <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-600">
+                      <span className="sr-only">{unreadNotifications} unread notifications</span>
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80" align="end">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <h4 className="font-medium">Notifications</h4>
+                  {unreadNotifications > 0 && (
+                    <Button variant="ghost" size="sm" onClick={markAllAsRead}>
+                      Mark all as read
+                    </Button>
+                  )}
+                </div>
+                <div className="max-h-[calc(var(--radix-popover-content-available-height)-80px)] overflow-y-auto">
+                  <div className="flex items-start gap-4 py-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                      <User className="h-4 w-4 text-primary" />
+                    </span>
+                    <div className="grid gap-1">
+                      <p className="text-sm font-medium">New customer registered</p>
+                      <p className="text-xs text-muted-foreground">John Smith has created an account</p>
+                      <p className="text-xs text-muted-foreground">2 hours ago</p>
                     </div>
-                  ))
-                )}
-              </div>
-              {notifications.length > 0 && (
-                <div className="p-2 border-t text-center">
-                  <Button variant="ghost" size="sm" className="w-full" asChild>
-                    <Link to="/notifications">View all notifications</Link>
-                  </Button>
+                  </div>
+                  <div className="flex items-start gap-4 py-3 border-t">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                      <Bell className="h-4 w-4 text-primary" />
+                    </span>
+                    <div className="grid gap-1">
+                      <p className="text-sm font-medium">New payment received</p>
+                      <p className="text-xs text-muted-foreground">Payment #1234 has been processed</p>
+                      <p className="text-xs text-muted-foreground">1 day ago</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-4 py-3 border-t">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                      <Settings className="h-4 w-4 text-primary" />
+                    </span>
+                    <div className="grid gap-1">
+                      <p className="text-sm font-medium">System update</p>
+                      <p className="text-xs text-muted-foreground">The application has been updated to version 1.2.0</p>
+                      <p className="text-xs text-muted-foreground">2 days ago</p>
+                    </div>
+                  </div>
                 </div>
-              )}
-            </PopoverContent>
-          </Popover>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                <Avatar>
-                  <AvatarImage src="" alt={userProfile.name} />
-                  <AvatarFallback>{getInitials(userProfile.name)}</AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{userProfile.name}</p>
-                  <p className="text-xs leading-none text-muted-foreground">{userProfile.email}</p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/profile">
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleLogout}>
-                Log out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </PopoverContent>
+            </Popover>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback>
+                      {userInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">Account</p>
+                    <p className="text-xs leading-none text-muted-foreground">{userEmail}</p>
+                    {isAdmin && (
+                      <div className="flex items-center mt-1 text-xs text-primary">
+                        <ShieldCheck className="h-3 w-3 mr-1" /> Admin Access
+                      </div>
+                    )}
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/settings")}>
+                  <Settings className="mr-2 h-4 w-4" /> Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="mr-2 h-4 w-4" /> Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
     </header>
   );
-};
-
-export default Navbar;
+}
