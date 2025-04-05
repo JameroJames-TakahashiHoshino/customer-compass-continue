@@ -11,6 +11,7 @@ import Sales from "@/pages/Sales";
 import Payments from "@/pages/Payments";
 import CustomerDetail from "@/pages/CustomerDetail";
 import DefaultLayout from "@/layouts/DefaultLayout";
+import Help from "@/pages/Help";
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
           <Route path="/customers/:id" element={<CustomerDetail />} />
           <Route path="/sales" element={<Sales />} />
           <Route path="/payments" element={<Payments />} />
+          <Route path="/help" element={<Help />} />
         </Route>
         
         <Route path="*" element={<NotFound />} />
