@@ -13,12 +13,13 @@ import Customers from "./pages/Customers";
 import CustomersTable from "./pages/CustomersTable";
 import CustomerDetail from "./pages/CustomerDetail";
 import NotFound from "./pages/NotFound";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
-  const isAuthPage = location.pathname === "/";
+  const isAuthPage = location.pathname === "/" || location.pathname === "/reset-password";
 
   if (isAuthPage) {
     return <>{children}</>;
@@ -41,11 +42,12 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
-      <Sonner />
+      <Sonner position="top-right" />
       <BrowserRouter>
         <AppLayout>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/customers" element={<Customers />} />
             <Route path="/customers-table" element={<CustomersTable />} />

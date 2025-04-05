@@ -8,12 +8,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ArrowLeft } from "lucide-react";
 
 export function AuthForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [resetPasswordMode, setResetPasswordMode] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   const navigate = useNavigate();
 
   // Sign in form submission
@@ -70,6 +74,91 @@ export function AuthForm() {
     }
   };
 
+  // Password reset request
+  const handleResetPassword = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      setResetSent(true);
+      toast.success("Password reset instructions sent to your email");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to send reset instructions");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (resetPasswordMode) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Reset Password</CardTitle>
+          <CardDescription>
+            Enter your email address and we'll send you instructions to reset your password.
+          </CardDescription>
+        </CardHeader>
+        {resetSent ? (
+          <CardContent className="space-y-4">
+            <Alert>
+              <AlertDescription>
+                If an account exists with this email, you will receive password reset instructions shortly.
+              </AlertDescription>
+            </Alert>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setResetPasswordMode(false);
+                setResetSent(false);
+              }}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Sign In
+            </Button>
+          </CardContent>
+        ) : (
+          <form onSubmit={handleResetPassword}>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email-reset">Email</Label>
+                <Input
+                  id="email-reset"
+                  type="email"
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+            </CardContent>
+            <CardFooter className="flex flex-col space-y-2">
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Sending..." : "Send Reset Instructions"}
+              </Button>
+              <Button
+                variant="ghost"
+                type="button"
+                className="w-full"
+                onClick={() => setResetPasswordMode(false)}
+              >
+                Back to Sign In
+              </Button>
+            </CardFooter>
+          </form>
+        )}
+      </Card>
+    );
+  }
+
   return (
     <Tabs defaultValue="signin" className="w-full max-w-md">
       <TabsList className="grid w-full grid-cols-2">
@@ -100,7 +189,12 @@ export function AuthForm() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
-                  <Button variant="link" className="px-0 text-xs text-primary" type="button">
+                  <Button 
+                    variant="link" 
+                    className="px-0 text-xs text-primary" 
+                    type="button"
+                    onClick={() => setResetPasswordMode(true)}
+                  >
                     Forgot password?
                   </Button>
                 </div>
