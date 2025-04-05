@@ -1,41 +1,19 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CustomerType } from "@/components/CustomerCard";
 import { InteractionType } from "@/components/InteractionItem";
 import { ArrowRight, Plus, Users, BarChart3, Calendar, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 
-const mockRecentCustomers: CustomerType[] = [
-  {
-    id: 1,
-    name: "John Smith",
-    email: "john@example.com",
-    phone: "(555) 123-4567",
-    status: "active",
-    lastContact: "2023-10-15",
-    company: "Tech Solutions Inc"
-  },
-  {
-    id: 2,
-    name: "Sarah Johnson",
-    email: "sarah@example.com",
-    phone: "(555) 987-6543",
-    status: "active",
-    lastContact: "2023-10-10",
-    company: "Design Masters"
-  },
-  {
-    id: 3,
-    name: "Michael Brown",
-    email: "michael@example.com",
-    phone: "(555) 456-7890",
-    status: "inactive",
-    lastContact: "2023-09-28"
-  }
-];
+interface CustomerType {
+  custno: string;
+  custname: string | null;
+  address: string | null;
+  payterm: string | null;
+}
 
 const mockRecentInteractions: InteractionType[] = [
   {
@@ -64,6 +42,8 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [recentCustomers, setRecentCustomers] = useState<CustomerType[]>([]);
+  const [customerCount, setCustomerCount] = useState(0);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -72,6 +52,9 @@ const Dashboard = () => {
       
       if (!session) {
         navigate("/");
+      } else {
+        await fetchCustomers();
+        await fetchCustomerCount();
       }
       
       setLoading(false);
@@ -90,6 +73,42 @@ const Dashboard = () => {
       subscription.unsubscribe();
     };
   }, [navigate]);
+
+  const fetchCustomers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('customer')
+        .select('*')
+        .limit(3)
+        .order('custno', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching customers:', error);
+        return;
+      }
+
+      setRecentCustomers(data || []);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const fetchCustomerCount = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('customer')
+        .select('*', { count: 'exact', head: true });
+
+      if (error) {
+        console.error('Error counting customers:', error);
+        return;
+      }
+
+      setCustomerCount(count || 0);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
 
   if (loading) {
     return (
@@ -121,8 +140,8 @@ const Dashboard = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">128</div>
-            <p className="text-xs text-muted-foreground">+6 from last month</p>
+            <div className="text-2xl font-bold">{customerCount}</div>
+            <p className="text-xs text-muted-foreground">From Supabase database</p>
           </CardContent>
         </Card>
         <Card>
@@ -131,8 +150,8 @@ const Dashboard = () => {
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">85</div>
-            <p className="text-xs text-muted-foreground">+12% from last month</p>
+            <div className="text-2xl font-bold">{customerCount}</div>
+            <p className="text-xs text-muted-foreground">Customers with activity</p>
           </CardContent>
         </Card>
         <Card>
@@ -141,7 +160,7 @@ const Dashboard = () => {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
+            <div className="text-2xl font-bold">0</div>
             <p className="text-xs text-muted-foreground">This week</p>
           </CardContent>
         </Card>
@@ -151,7 +170,7 @@ const Dashboard = () => {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24</div>
+            <div className="text-2xl font-bold">{mockRecentInteractions.length}</div>
             <p className="text-xs text-muted-foreground">In the last 7 days</p>
           </CardContent>
         </Card>
@@ -167,19 +186,23 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {mockRecentCustomers.map(customer => (
-                <div key={customer.id} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="font-medium">{customer.name}</div>
-                    <div className="text-sm text-muted-foreground">{customer.company}</div>
+              {recentCustomers.length > 0 ? (
+                recentCustomers.map(customer => (
+                  <div key={customer.custno} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium">{customer.custname || "Unnamed Customer"}</div>
+                      <div className="text-sm text-muted-foreground">#{customer.custno}</div>
+                    </div>
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link to={`/customers/${customer.custno}`}>
+                        View <ArrowRight className="ml-1 h-4 w-4" />
+                      </Link>
+                    </Button>
                   </div>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link to={`/customers/${customer.id}`}>
-                      View <ArrowRight className="ml-1 h-4 w-4" />
-                    </Link>
-                  </Button>
-                </div>
-              ))}
+                ))
+              ) : (
+                <div className="text-center text-muted-foreground py-4">No customers found</div>
+              )}
             </div>
             <Button variant="outline" className="mt-4 w-full" asChild>
               <Link to="/customers">View All Customers</Link>

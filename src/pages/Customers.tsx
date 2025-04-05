@@ -150,7 +150,11 @@ const Customers = () => {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button variant="outline" className="w-full" onClick={() => navigate(`/customers/${customer.custno}`)}>
+                <Button 
+                  variant="outline" 
+                  className="w-full" 
+                  onClick={() => navigate(`/customers/${customer.custno}`)}
+                >
                   View Details
                 </Button>
               </CardFooter>

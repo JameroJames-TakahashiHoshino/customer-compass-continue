@@ -13,59 +13,31 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { CustomerType } from "@/components/CustomerCard";
 import { InteractionType } from "@/components/InteractionItem";
 import InteractionItem from "@/components/InteractionItem";
 import { format } from "date-fns";
 import { ArrowLeft, Building, Calendar, Mail, MapPin, Phone, Plus } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Session } from "@supabase/supabase-js";
 
-// Mock customer data
-const mockCustomers: CustomerType[] = [
-  {
-    id: 1,
-    name: "John Smith",
-    email: "john@example.com",
-    phone: "(555) 123-4567",
-    status: "active",
-    lastContact: "2023-10-15",
-    company: "Tech Solutions Inc"
-  },
-  {
-    id: 2,
-    name: "Sarah Johnson",
-    email: "sarah@example.com",
-    phone: "(555) 987-6543",
-    status: "active",
-    lastContact: "2023-10-10",
-    company: "Design Masters"
-  },
-  {
-    id: 3,
-    name: "Michael Brown",
-    email: "michael@example.com",
-    phone: "(555) 456-7890",
-    status: "inactive",
-    lastContact: "2023-09-28"
-  },
-  {
-    id: 4,
-    name: "Emily Davis",
-    email: "emily@example.com",
-    phone: "(555) 789-0123",
-    status: "pending",
-    lastContact: "2023-10-05",
-    company: "Marketing Pros"
-  }
-];
+interface CustomerType {
+  custno: string;
+  custname: string | null;
+  address: string | null;
+  payterm: string | null;
+  status?: "active" | "inactive" | "pending";
+  lastContact?: string;
+  imageUrl?: string;
+}
 
 // Mock interactions
-const mockInteractions: Record<number, InteractionType[]> = {
-  1: [
+const mockInteractions: Record<string, InteractionType[]> = {
+  "1": [
     {
       id: 1,
       type: "call",
       title: "Sales Call",
-      description: "Discussed new product offerings and pricing options. John showed interest in our premium plan.",
+      description: "Discussed new product offerings and pricing options.",
       date: "2023-10-15T14:30:00",
       user: {
         name: "Demo User"
@@ -77,52 +49,6 @@ const mockInteractions: Record<number, InteractionType[]> = {
       title: "Follow-up Email",
       description: "Sent detailed information about the products discussed on the call along with pricing documents.",
       date: "2023-10-16T09:15:00",
-      user: {
-        name: "Demo User"
-      }
-    },
-    {
-      id: 3,
-      type: "meeting",
-      title: "Product Demo",
-      description: "Scheduled a virtual product demonstration with the client's team for next week.",
-      date: "2023-10-12T11:00:00",
-      user: {
-        name: "Demo User"
-      }
-    }
-  ],
-  2: [
-    {
-      id: 1,
-      type: "meeting",
-      title: "Initial Consultation",
-      description: "Met with Sarah to discuss her company's design requirements for the new website.",
-      date: "2023-10-10T10:00:00",
-      user: {
-        name: "Demo User"
-      }
-    }
-  ],
-  3: [
-    {
-      id: 1,
-      type: "note",
-      title: "Inactive Status Note",
-      description: "Michael hasn't responded to our last 3 attempts to contact him. Marking as inactive for now.",
-      date: "2023-09-28T16:45:00",
-      user: {
-        name: "Demo User"
-      }
-    }
-  ],
-  4: [
-    {
-      id: 1,
-      type: "email",
-      title: "Welcome Email",
-      description: "Sent a welcome email with our onboarding materials and next steps.",
-      date: "2023-10-05T14:00:00",
       user: {
         name: "Demo User"
       }
@@ -138,35 +64,79 @@ const statusColors = {
 
 const CustomerDetail = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { id } = useParams<{ id: string }>();
+  const [session, setSession] = useState<Session | null>(null);
   const [customer, setCustomer] = useState<CustomerType | null>(null);
   const [interactions, setInteractions] = useState<InteractionType[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is authenticated
-    const authStatus = localStorage.getItem("isAuthenticated") === "true";
-    setIsAuthenticated(authStatus);
-    
-    if (!authStatus) {
-      navigate("/");
-    } else if (id) {
-      // Find customer by ID
-      const customerId = parseInt(id);
-      const foundCustomer = mockCustomers.find(c => c.id === customerId);
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
       
-      if (foundCustomer) {
-        setCustomer(foundCustomer);
-        // Load customer interactions
-        setInteractions(mockInteractions[customerId] || []);
-      } else {
-        // Customer not found, redirect to customer list
-        navigate("/customers");
+      if (!session) {
+        navigate("/");
+        return;
       }
-    }
+      
+      fetchCustomerDetails();
+    };
+
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (!session) {
+        navigate("/");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [id, navigate]);
 
+  const fetchCustomerDetails = async () => {
+    if (!id) return;
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('customer')
+        .select('*')
+        .eq('custno', id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching customer:', error);
+        navigate("/customers");
+        return;
+      }
+
+      if (data) {
+        const customerData: CustomerType = {
+          ...data,
+          status: "active",
+          lastContact: new Date().toISOString().split('T')[0]
+        };
+        setCustomer(customerData);
+        
+        // For now, use mock interactions
+        setInteractions(mockInteractions[id] || []);
+      } else {
+        navigate("/customers");
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      navigate("/customers");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getInitials = (name: string) => {
+    if (!name) return "?";
     return name
       .split(" ")
       .map(part => part.charAt(0))
@@ -174,9 +144,19 @@ const CustomerDetail = () => {
       .toUpperCase();
   };
 
-  if (!isAuthenticated || !customer) {
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!customer) {
     return null;
   }
+
+  const status = customer.status || "active";
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -198,14 +178,13 @@ const CustomerDetail = () => {
           <CardContent>
             <div className="flex flex-col items-center justify-center space-y-3 border-b pb-5">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={customer.imageUrl} alt={customer.name} />
-                <AvatarFallback className="text-2xl">{getInitials(customer.name)}</AvatarFallback>
+                <AvatarImage src={customer.imageUrl} alt={customer.custname || ""} />
+                <AvatarFallback className="text-2xl">{getInitials(customer.custname || "")}</AvatarFallback>
               </Avatar>
               <div className="space-y-1 text-center">
-                <h3 className="text-xl font-semibold">{customer.name}</h3>
-                {customer.company && <p className="text-sm text-muted-foreground">{customer.company}</p>}
-                <Badge className={statusColors[customer.status]}>
-                  {customer.status.charAt(0).toUpperCase() + customer.status.slice(1)}
+                <h3 className="text-xl font-semibold">{customer.custname || "Unnamed Customer"}</h3>
+                <Badge className={statusColors[status]}>
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
                 </Badge>
               </div>
             </div>
@@ -214,33 +193,15 @@ const CustomerDetail = () => {
               <div className="flex items-start space-x-3">
                 <Mail className="mt-0.5 h-5 w-5 text-muted-foreground" />
                 <div className="space-y-0.5">
-                  <p className="text-sm font-medium">Email</p>
-                  <p className="text-sm text-muted-foreground">{customer.email}</p>
+                  <p className="text-sm font-medium">Customer ID</p>
+                  <p className="text-sm text-muted-foreground">{customer.custno}</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
                 <Phone className="mt-0.5 h-5 w-5 text-muted-foreground" />
                 <div className="space-y-0.5">
-                  <p className="text-sm font-medium">Phone</p>
-                  <p className="text-sm text-muted-foreground">{customer.phone}</p>
-                </div>
-              </div>
-              {customer.company && (
-                <div className="flex items-start space-x-3">
-                  <Building className="mt-0.5 h-5 w-5 text-muted-foreground" />
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-medium">Company</p>
-                    <p className="text-sm text-muted-foreground">{customer.company}</p>
-                  </div>
-                </div>
-              )}
-              <div className="flex items-start space-x-3">
-                <Calendar className="mt-0.5 h-5 w-5 text-muted-foreground" />
-                <div className="space-y-0.5">
-                  <p className="text-sm font-medium">Last Contact</p>
-                  <p className="text-sm text-muted-foreground">
-                    {format(new Date(customer.lastContact), "MMMM d, yyyy")}
-                  </p>
+                  <p className="text-sm font-medium">Payment Terms</p>
+                  <p className="text-sm text-muted-foreground">{customer.payterm || "Not specified"}</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
@@ -248,12 +209,21 @@ const CustomerDetail = () => {
                 <div className="space-y-0.5">
                   <p className="text-sm font-medium">Address</p>
                   <p className="text-sm text-muted-foreground">
-                    123 Example St<br />
-                    Suite 500<br />
-                    San Francisco, CA 94107
+                    {customer.address || "No address provided"}
                   </p>
                 </div>
               </div>
+              {customer.lastContact && (
+                <div className="flex items-start space-x-3">
+                  <Calendar className="mt-0.5 h-5 w-5 text-muted-foreground" />
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-medium">Last Contact</p>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(customer.lastContact), "MMMM d, yyyy")}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
             
             <Separator className="my-6" />
