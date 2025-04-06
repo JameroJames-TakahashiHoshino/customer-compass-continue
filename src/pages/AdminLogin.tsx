@@ -179,7 +179,7 @@ const AdminLogin = () => {
                   className="w-full" 
                   onClick={() => navigate("/index")}
                 >
-                  <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Back to Customer Sign In
                 </Button>
               </CardFooter>
             </form>
@@ -238,7 +238,7 @@ const AdminLogin = () => {
                   className="w-full" 
                   onClick={() => navigate("/index")}
                 >
-                  <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Back to Customer Sign In
                 </Button>
               </CardFooter>
             </form>

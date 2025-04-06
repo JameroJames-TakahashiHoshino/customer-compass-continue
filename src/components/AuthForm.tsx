@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft } from "lucide-react";
+import { Session } from "@supabase/supabase-js";
 
 export function AuthForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -18,9 +18,33 @@ export function AuthForm() {
   const [fullName, setFullName] = useState("");
   const [resetPasswordMode, setResetPasswordMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
   const navigate = useNavigate();
 
-  // Sign in form submission
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      
+      if (session) {
+        navigate("/dashboard");
+      }
+    };
+
+    checkSession();
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) {
+        navigate("/dashboard");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
+
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
@@ -44,13 +68,11 @@ export function AuthForm() {
     }
   };
 
-  // Sign up form submission
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
-      // Create new user
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -74,7 +96,6 @@ export function AuthForm() {
     }
   };
 
-  // Password reset request
   const handleResetPassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
@@ -166,7 +187,6 @@ export function AuthForm() {
         <TabsTrigger value="signup">Sign Up</TabsTrigger>
       </TabsList>
       
-      {/* Sign In Form */}
       <TabsContent value="signin">
         <Card>
           <CardHeader>
@@ -216,7 +236,6 @@ export function AuthForm() {
         </Card>
       </TabsContent>
       
-      {/* Sign Up Form */}
       <TabsContent value="signup">
         <Card>
           <CardHeader>

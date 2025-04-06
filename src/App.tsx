@@ -1,5 +1,7 @@
 
-import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import IndexPage from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
 import Dashboard from "@/pages/Dashboard";
@@ -13,6 +15,42 @@ import CustomerDetail from "@/pages/CustomerDetail";
 import DefaultLayout from "@/layouts/DefaultLayout";
 import Help from "@/pages/Help";
 
+// Protected route that redirects unauthenticated users to index
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const [loading, setLoading] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setAuthenticated(!!session);
+      setLoading(false);
+    };
+    
+    checkAuth();
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthenticated(!!session);
+      setLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!authenticated) {
+    return <Navigate to="/index" state={{ from: location }} replace />;
+  }
+
+  return <>{children}</>;
+};
+
 function App() {
   return (
     <Router>
@@ -22,7 +60,11 @@ function App() {
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         
-        <Route element={<DefaultLayout />}>
+        <Route element={
+          <ProtectedRoute>
+            <DefaultLayout />
+          </ProtectedRoute>
+        }>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/customers-table" element={<CustomersTable />} />
