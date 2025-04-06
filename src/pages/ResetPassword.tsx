@@ -16,18 +16,27 @@ const ResetPassword = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
+  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if we have a hash in the URL, which indicates this is a valid reset link
-    const hash = window.location.hash;
-    if (!hash || hash.length < 1) {
-      setError("Invalid password reset link. Please request a new one.");
+    // Check if we have a verified email from the code verification process
+    const email = localStorage.getItem('resetVerifiedEmail');
+    if (!email) {
+      setError("Invalid password reset session. Please request a new one.");
+      return;
     }
+    
+    setVerifiedEmail(email);
   }, []);
 
   const handleResetPassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
+    
+    if (!verifiedEmail) {
+      setError("Invalid password reset session. Please request a new one.");
+      return;
+    }
     
     if (password !== confirmPassword) {
       setError("Passwords do not match");
@@ -42,6 +51,16 @@ const ResetPassword = () => {
     setLoading(true);
     
     try {
+      // First sign in with the special OTP method to get a session
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithOtp({
+        email: verifiedEmail,
+      });
+      
+      if (signInError) {
+        throw signInError;
+      }
+      
+      // Then update the user's password
       const { error } = await supabase.auth.updateUser({ password });
       
       if (error) {
@@ -50,6 +69,11 @@ const ResetPassword = () => {
       
       setSuccess(true);
       toast.success("Password reset successfully");
+      
+      // Clean up local storage
+      localStorage.removeItem(`resetCode_${verifiedEmail}`);
+      localStorage.removeItem(`resetEmail_${verifiedEmail}`);
+      localStorage.removeItem('resetVerifiedEmail');
       
       // Redirect to login after a short delay
       setTimeout(() => {

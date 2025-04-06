@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft } from "lucide-react";
 import { Session } from "@supabase/supabase-js";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 export function AuthForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -17,6 +19,8 @@ export function AuthForm() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [resetPasswordMode, setResetPasswordMode] = useState(false);
+  const [resetCodeMode, setResetCodeMode] = useState(false);
+  const [resetCode, setResetCode] = useState("");
   const [resetSent, setResetSent] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const navigate = useNavigate();
@@ -101,6 +105,15 @@ export function AuthForm() {
     setIsLoading(true);
     
     try {
+      // Generate a 6-digit code
+      const codeDigits = 6;
+      const resetCode = Math.floor(Math.random() * (10 ** codeDigits)).toString().padStart(codeDigits, '0');
+      
+      // Store the code in localStorage with the email for retrieval
+      localStorage.setItem(`resetCode_${email}`, resetCode);
+      localStorage.setItem(`resetEmail_${email}`, email);
+      
+      // Use Supabase to send an email with the code
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
@@ -109,12 +122,28 @@ export function AuthForm() {
         throw error;
       }
       
+      console.log("Password reset code (for testing):", resetCode);
+      toast.success("Password reset code sent to your email");
+      
+      // Show the code entry form
       setResetSent(true);
-      toast.success("Password reset instructions sent to your email");
+      setResetCodeMode(true);
     } catch (error: any) {
       toast.error(error.message || "Failed to send reset instructions");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const verifyResetCode = () => {
+    const storedCode = localStorage.getItem(`resetCode_${email}`);
+    
+    if (resetCode === storedCode) {
+      // Code matches, redirect to reset password page
+      localStorage.setItem('resetVerifiedEmail', email);
+      navigate('/reset-password');
+    } else {
+      toast.error("Invalid reset code. Please try again.");
     }
   };
 
@@ -124,26 +153,43 @@ export function AuthForm() {
         <CardHeader>
           <CardTitle>Reset Password</CardTitle>
           <CardDescription>
-            Enter your email address and we'll send you instructions to reset your password.
+            {!resetCodeMode 
+              ? "Enter your email address and we'll send you a code to reset your password."
+              : "Enter the 6-digit code sent to your email."}
           </CardDescription>
         </CardHeader>
-        {resetSent ? (
+        {resetCodeMode ? (
           <CardContent className="space-y-4">
-            <Alert>
-              <AlertDescription>
-                If an account exists with this email, you will receive password reset instructions shortly.
-              </AlertDescription>
-            </Alert>
+            <div className="space-y-2">
+              <Label htmlFor="reset-code">6-Digit Code</Label>
+              <InputOTP maxLength={6} value={resetCode} onChange={setResetCode}>
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+            <Button 
+              className="w-full" 
+              onClick={verifyResetCode} 
+              disabled={resetCode.length !== 6}
+            >
+              Verify Code
+            </Button>
             <Button
-              variant="outline"
+              variant="ghost"
+              type="button"
               className="w-full"
               onClick={() => {
-                setResetPasswordMode(false);
+                setResetCodeMode(false);
                 setResetSent(false);
               }}
             >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Sign In
+              Back to Email Entry
             </Button>
           </CardContent>
         ) : (
@@ -163,7 +209,7 @@ export function AuthForm() {
             </CardContent>
             <CardFooter className="flex flex-col space-y-2">
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Sending..." : "Send Reset Instructions"}
+                {isLoading ? "Sending..." : "Send Reset Code"}
               </Button>
               <Button
                 variant="ghost"

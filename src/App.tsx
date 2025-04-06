@@ -41,11 +41,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
 
   if (!authenticated) {
-    return <Navigate to="/index" state={{ from: location }} replace />;
+    return <Navigate to="/" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;
@@ -56,7 +56,7 @@ function App() {
     <Router>
       <div className="w-full">
         <Routes>
-          <Route path="/" element={<Navigate to="/index" replace />} />
+          <Route path="/" element={<IndexPage />} />
           <Route path="/index" element={<IndexPage />} />
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/reset-password" element={<ResetPassword />} />

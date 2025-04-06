@@ -1,9 +1,7 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreditCard, DollarSign, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-// Fix the import to use the correct components from chart.tsx
 import { ChartContainer } from "@/components/ui/chart";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -44,7 +42,6 @@ const Dashboard = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch total customers
         const { data: customers, error: customersError } = await supabase
           .from('customer')
           .select('*', { count: 'exact' });
@@ -55,7 +52,6 @@ const Dashboard = () => {
           setTotalCustomers(customers ? customers.length : 0);
         }
 
-        // Fetch total sales
         const { data: sales, error: salesError } = await supabase
           .from('sales')
           .select('*');
@@ -63,13 +59,11 @@ const Dashboard = () => {
         if (salesError) {
           console.error("Error fetching sales:", salesError);
         } else {
-          // Since amount isn't directly on sales table, we'll use a placeholder or count
           const totalSalesCount = sales?.length || 0;
           setTotalSales(totalSalesCount);
           setSalesData(sales || []);
         }
 
-        // Fetch total payments
         const { data: payments, error: paymentsError } = await supabase
           .from('payment')
           .select('*');
@@ -89,13 +83,11 @@ const Dashboard = () => {
     fetchData();
   }, []);
 
-  // Combine sales and payment data for activity feed
   const activityData: ActivityItem[] = [
     ...salesData.map(sale => ({ ...sale, type: 'sale' as const })), 
     ...paymentData.map(payment => ({ ...payment, type: 'payment' as const }))
   ];
 
-  // Sort activity data by date
   const sortedActivityData = activityData.sort((a, b) => {
     const dateA = a.type === 'sale' && a.salesdate ? new Date(a.salesdate) : 
                  a.type === 'payment' && a.paydate ? new Date(a.paydate) : new Date();
@@ -104,7 +96,6 @@ const Dashboard = () => {
     return dateB.getTime() - dateA.getTime();
   });
 
-  // Format the activity date based on the item type
   const formatActivityDate = (item: ActivityItem): string => {
     if (item.type === 'sale' && item.salesdate) {
       return item.salesdate;
@@ -115,7 +106,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="w-full py-6 px-4">
       <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
