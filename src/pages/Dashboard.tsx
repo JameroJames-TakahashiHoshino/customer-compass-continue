@@ -1,18 +1,44 @@
+
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreditCard, DollarSign, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-// Fix the incorrect import
-import { Chart } from "@/components/ui/chart";
+// Fix the import to use the correct components from chart.tsx
+import { ChartContainer } from "@/components/ui/chart";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
+
+interface Customer {
+  custno: string;
+  custname?: string;
+  address?: string;
+  payterm?: string;
+}
+
+interface Sale {
+  transno: string;
+  salesdate?: string;
+  custno?: string;
+  empno?: string;
+  amount?: number;
+}
+
+interface Payment {
+  orno: string;
+  paydate?: string;
+  amount?: number;
+  transno?: string;
+}
+
+type ActivityItem = (Sale & { type: 'sale' }) | (Payment & { type: 'payment' });
 
 const Dashboard = () => {
   const [totalCustomers, setTotalCustomers] = useState<number | null>(null);
   const [totalSales, setTotalSales] = useState<number | null>(null);
   const [totalPayments, setTotalPayments] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [salesData, setSalesData] = useState<any[]>([]);
-  const [paymentData, setPaymentData] = useState<any[]>([]);
+  const [salesData, setSalesData] = useState<Sale[]>([]);
+  const [paymentData, setPaymentData] = useState<Payment[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -20,7 +46,7 @@ const Dashboard = () => {
       try {
         // Fetch total customers
         const { data: customers, error: customersError } = await supabase
-          .from('customers')
+          .from('customer')
           .select('*', { count: 'exact' });
 
         if (customersError) {
@@ -32,25 +58,26 @@ const Dashboard = () => {
         // Fetch total sales
         const { data: sales, error: salesError } = await supabase
           .from('sales')
-          .select('amount');
+          .select('*');
 
         if (salesError) {
           console.error("Error fetching sales:", salesError);
         } else {
-          const totalSalesAmount = sales?.reduce((acc, sale) => acc + sale.amount, 0) || 0;
-          setTotalSales(totalSalesAmount);
+          // Since amount isn't directly on sales table, we'll use a placeholder or count
+          const totalSalesCount = sales?.length || 0;
+          setTotalSales(totalSalesCount);
           setSalesData(sales || []);
         }
 
         // Fetch total payments
         const { data: payments, error: paymentsError } = await supabase
-          .from('payments')
-          .select('amount');
+          .from('payment')
+          .select('*');
 
         if (paymentsError) {
           console.error("Error fetching payments:", paymentsError);
         } else {
-          const totalPaymentsAmount = payments?.reduce((acc, payment) => acc + payment.amount, 0) || 0;
+          const totalPaymentsAmount = payments?.reduce((acc, payment) => acc + (payment.amount || 0), 0) || 0;
           setTotalPayments(totalPaymentsAmount);
           setPaymentData(payments || []);
         }
@@ -63,25 +90,28 @@ const Dashboard = () => {
   }, []);
 
   // Combine sales and payment data for activity feed
-  const activityData = [...salesData.map(sale => ({ ...sale, type: 'sale' })), ...paymentData.map(payment => ({ ...payment, type: 'payment' }))];
+  const activityData: ActivityItem[] = [
+    ...salesData.map(sale => ({ ...sale, type: 'sale' as const })), 
+    ...paymentData.map(payment => ({ ...payment, type: 'payment' as const }))
+  ];
 
   // Sort activity data by date
   const sortedActivityData = activityData.sort((a, b) => {
-    const dateA = a.salesdate ? new Date(a.salesdate) : new Date(a.paydate);
-    const dateB = b.salesdate ? new Date(b.salesdate) : new Date(b.paydate);
+    const dateA = a.type === 'sale' && a.salesdate ? new Date(a.salesdate) : 
+                 a.type === 'payment' && a.paydate ? new Date(a.paydate) : new Date();
+    const dateB = b.type === 'sale' && b.salesdate ? new Date(b.salesdate) : 
+                 b.type === 'payment' && b.paydate ? new Date(b.paydate) : new Date();
     return dateB.getTime() - dateA.getTime();
   });
 
   // Format the activity date based on the item type
-  // Fix the type checking for activity items
-  const formatActivityDate = (item: any) => {
-    // Check which type of item we're dealing with
-    if ('salesdate' in item) {
-      return item.salesdate; // Sales item
-    } else if ('paydate' in item) {
-      return item.paydate; // Payment item
+  const formatActivityDate = (item: ActivityItem): string => {
+    if (item.type === 'sale' && item.salesdate) {
+      return item.salesdate;
+    } else if (item.type === 'payment' && item.paydate) {
+      return item.paydate;
     }
-    return ''; // Fallback
+    return '';
   };
 
   return (
@@ -112,13 +142,13 @@ const Dashboard = () => {
               <DollarSign className="h-4 w-4 mr-2" />
               Total Sales
             </CardTitle>
-            <CardDescription>All time</CardDescription>
+            <CardDescription>Number of transactions</CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
               <Skeleton className="h-4 w-24" />
             ) : (
-              <div className="text-2xl font-bold">${totalSales !== null ? totalSales.toFixed(2) : 'N/A'}</div>
+              <div className="text-2xl font-bold">{totalSales !== null ? totalSales : 'N/A'}</div>
             )}
           </CardContent>
         </Card>
@@ -147,8 +177,18 @@ const Dashboard = () => {
             <CardTitle>Sales Overview</CardTitle>
             <CardDescription>A summary of sales over time</CardDescription>
           </CardHeader>
-          <CardContent>
-            <Chart data={salesData} dataKey="amount" nameKey="salesdate" type="area" color="#82ca9d" />
+          <CardContent className="h-[300px]">
+            <ChartContainer config={{}}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={salesData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="salesdate" />
+                  <YAxis />
+                  <Tooltip />
+                  <Area type="monotone" dataKey="transno" stroke="#82ca9d" fill="#82ca9d" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
 
@@ -166,7 +206,7 @@ const Dashboard = () => {
                   <div key={index} className="py-2">
                     <div className="flex justify-between">
                       <p className="text-sm font-medium">
-                        {item.type === 'sale' ? 'Sale' : 'Payment'} - ${item.amount}
+                        {item.type === 'sale' ? 'Sale' : 'Payment'} - {item.type === 'sale' ? item.transno : item.orno}
                       </p>
                       <p className="text-xs text-gray-500">
                         {formatActivityDate(item)}
