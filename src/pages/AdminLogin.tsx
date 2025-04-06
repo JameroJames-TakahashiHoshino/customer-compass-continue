@@ -177,7 +177,7 @@ const AdminLogin = () => {
                   variant="outline" 
                   type="button" 
                   className="w-full" 
-                  onClick={() => navigate("/")}
+                  onClick={() => navigate("/index")}
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
                 </Button>
@@ -236,7 +236,7 @@ const AdminLogin = () => {
                   variant="outline" 
                   type="button" 
                   className="w-full" 
-                  onClick={() => navigate("/")}
+                  onClick={() => navigate("/index")}
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
                 </Button>
