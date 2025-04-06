@@ -54,28 +54,30 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 function App() {
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<Navigate to="/index" replace />} />
-        <Route path="/index" element={<IndexPage />} />
-        <Route path="/admin-login" element={<AdminLogin />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        
-        <Route element={
-          <ProtectedRoute>
-            <DefaultLayout />
-          </ProtectedRoute>
-        }>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/customers" element={<Customers />} />
-          <Route path="/customers-table" element={<CustomersTable />} />
-          <Route path="/customers/:id" element={<CustomerDetail />} />
-          <Route path="/sales" element={<Sales />} />
-          <Route path="/payments" element={<Payments />} />
-          <Route path="/help" element={<Help />} />
-        </Route>
-        
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <div className="w-full">
+        <Routes>
+          <Route path="/" element={<Navigate to="/index" replace />} />
+          <Route path="/index" element={<IndexPage />} />
+          <Route path="/admin-login" element={<AdminLogin />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          
+          <Route element={
+            <ProtectedRoute>
+              <DefaultLayout />
+            </ProtectedRoute>
+          }>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/customers" element={<Customers />} />
+            <Route path="/customers-table" element={<CustomersTable />} />
+            <Route path="/customers/:id" element={<CustomerDetail />} />
+            <Route path="/sales" element={<Sales />} />
+            <Route path="/payments" element={<Payments />} />
+            <Route path="/help" element={<Help />} />
+          </Route>
+          
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </div>
     </Router>
   );
 }

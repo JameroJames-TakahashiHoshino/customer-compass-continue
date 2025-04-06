@@ -15,7 +15,7 @@ import { Home, Users, PieChart, Settings, Mail, Calendar, HelpCircle } from "luc
 
 export function Sidebar() {
   return (
-    <SidebarContainer>
+    <SidebarContainer className="mt-14"> {/* Added margin-top to push sidebar below header */}
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Main</SidebarGroupLabel>
