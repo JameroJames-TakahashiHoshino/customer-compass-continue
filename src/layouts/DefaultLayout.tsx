@@ -7,11 +7,11 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 const DefaultLayout = () => {
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col w-full">
         <Navbar />
         <div className="flex flex-1 w-full">
           <Sidebar />
-          <main className="flex-1 p-6 overflow-auto w-full">
+          <main className="flex-1 p-6 overflow-auto w-full max-w-[1400px] mx-auto">
             <Outlet />
           </main>
         </div>

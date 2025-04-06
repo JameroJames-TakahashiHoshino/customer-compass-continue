@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreditCard, DollarSign, Users } from "lucide-react";
@@ -106,11 +107,11 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="w-full py-6 px-4">
+    <div className="w-full max-w-[1400px] mx-auto py-6 px-4">
       <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card>
+        <Card className="w-full">
           <CardHeader>
             <CardTitle className="flex items-center">
               <Users className="h-4 w-4 mr-2" />
@@ -127,7 +128,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="w-full">
           <CardHeader>
             <CardTitle className="flex items-center">
               <DollarSign className="h-4 w-4 mr-2" />
@@ -144,7 +145,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="w-full">
           <CardHeader>
             <CardTitle className="flex items-center">
               <CreditCard className="h-4 w-4 mr-2" />
@@ -163,7 +164,7 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+        <Card className="w-full">
           <CardHeader>
             <CardTitle>Sales Overview</CardTitle>
             <CardDescription>A summary of sales over time</CardDescription>
@@ -183,7 +184,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="w-full">
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
             <CardDescription>Latest sales and payments</CardDescription>

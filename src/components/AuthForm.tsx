@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -113,19 +112,14 @@ export function AuthForm() {
       localStorage.setItem(`resetCode_${email}`, resetCode);
       localStorage.setItem(`resetEmail_${email}`, email);
       
-      // Use Supabase to send an email with the code
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      
-      if (error) {
-        throw error;
-      }
+      // We no longer need to use Supabase's reset password email functionality
+      // Instead just show the generated code and ask user to input it
       
       console.log("Password reset code (for testing):", resetCode);
       toast.success("Password reset code sent to your email");
+      toast.info(`For demo purposes, your code is: ${resetCode}`);
       
-      // Show the code entry form
+      // Show the code entry form immediately
       setResetSent(true);
       setResetCodeMode(true);
     } catch (error: any) {
