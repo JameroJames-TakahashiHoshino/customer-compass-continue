@@ -11,11 +11,21 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, Loader2 } from "lucide-react";
 import CustomerActions from "@/components/CustomerActions";
 import EditCustomerDialog from "@/components/EditCustomerDialog";
+import CustomerViewToggle from "@/components/CustomerViewToggle";
 
 interface CustomerType {
   custno: string;
@@ -32,6 +42,7 @@ const Customers = () => {
   const [loading, setLoading] = useState(true);
   const [editingCustomerNo, setEditingCustomerNo] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -102,6 +113,10 @@ const Customers = () => {
     fetchCustomers();
   };
 
+  const handleViewChange = (view: "grid" | "table") => {
+    setViewMode(view);
+  };
+
   if (loading && !customers.length) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -114,11 +129,14 @@ const Customers = () => {
     <div className="flex-1 space-y-4 p-6 w-full max-w-full">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Customers</h2>
-        <Button asChild>
-          <Link to="/customers/new">
-            <Plus className="mr-2 h-4 w-4" /> Add Customer
-          </Link>
-        </Button>
+        <div className="flex items-center gap-4">
+          <CustomerViewToggle currentView={viewMode} onViewChange={handleViewChange} />
+          <Button asChild>
+            <Link to="/customers/new">
+              <Plus className="mr-2 h-4 w-4" /> Add Customer
+            </Link>
+          </Button>
+        </div>
       </div>
       
       <div className="flex flex-col items-start justify-between gap-4 md:flex-row">
@@ -134,68 +152,123 @@ const Customers = () => {
         </div>
       </div>
       
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {customers.length > 0 ? (
-          customers.map(customer => (
-            <Card key={customer.custno} className="h-full flex flex-col">
-              <CardHeader className="flex-none pb-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-lg line-clamp-1">{customer.custname || "Unnamed Customer"}</CardTitle>
-                    <CardDescription>Customer #{customer.custno}</CardDescription>
+      {/* Grid View */}
+      {viewMode === "grid" && (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {customers.length > 0 ? (
+            customers.map(customer => (
+              <Card key={customer.custno} className="h-full flex flex-col">
+                <CardHeader className="flex-none pb-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-lg line-clamp-1">{customer.custname || "Unnamed Customer"}</CardTitle>
+                      <CardDescription>Customer #{customer.custno}</CardDescription>
+                    </div>
+                    <CustomerActions 
+                      customerNo={customer.custno} 
+                      onEdit={() => handleEditCustomer(customer.custno)}
+                      onDeleted={fetchCustomers}
+                    />
                   </div>
-                  <CustomerActions 
-                    customerNo={customer.custno} 
-                    onEdit={() => handleEditCustomer(customer.custno)}
-                    onDeleted={fetchCustomers}
-                  />
-                </div>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <div className="space-y-2">
-                  <div className="text-sm">
-                    <span className="font-medium">Address: </span>
-                    <span className="line-clamp-2">{customer.address || "No address provided"}</span>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <div className="space-y-2">
+                    <div className="text-sm">
+                      <span className="font-medium">Address: </span>
+                      <span className="line-clamp-2">{customer.address || "No address provided"}</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-medium">Payment Terms: </span>
+                      <span className="line-clamp-1">{customer.payterm || "Not specified"}</span>
+                    </div>
                   </div>
-                  <div className="text-sm">
-                    <span className="font-medium">Payment Terms: </span>
-                    <span className="line-clamp-1">{customer.payterm || "Not specified"}</span>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="flex-none mt-auto">
+                </CardContent>
+                <CardFooter className="flex-none mt-auto">
+                  <Button 
+                    variant="outline" 
+                    className="w-full" 
+                    onClick={() => navigate(`/customers/${customer.custno}`)}
+                  >
+                    View Details
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))
+          ) : (
+            <div className="col-span-full flex h-[200px] w-full flex-col items-center justify-center rounded-lg border border-dashed">
+              <p className="text-muted-foreground">No customers found</p>
+              {searchTerm ? (
                 <Button 
-                  variant="outline" 
-                  className="w-full" 
-                  onClick={() => navigate(`/customers/${customer.custno}`)}
+                  variant="link" 
+                  onClick={() => {
+                    setSearchTerm("");
+                  }}
                 >
-                  View Details
+                  Clear filters
                 </Button>
-              </CardFooter>
-            </Card>
-          ))
-        ) : (
-          <div className="col-span-full flex h-[200px] w-full flex-col items-center justify-center rounded-lg border border-dashed">
-            <p className="text-muted-foreground">No customers found</p>
-            {searchTerm ? (
-              <Button 
-                variant="link" 
-                onClick={() => {
-                  setSearchTerm("");
-                }}
-              >
-                Clear filters
-              </Button>
-            ) : (
-              <Button className="mt-2" asChild>
-                <Link to="/customers/new">
-                  <Plus className="mr-2 h-4 w-4" /> Add Customer
-                </Link>
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
+              ) : (
+                <Button className="mt-2" asChild>
+                  <Link to="/customers/new">
+                    <Plus className="mr-2 h-4 w-4" /> Add Customer
+                  </Link>
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Table View */}
+      {viewMode === "table" && (
+        <Card>
+          <CardContent className="p-0">
+            <div className="rounded-md border">
+              <Table>
+                <TableCaption>
+                  {customers.length === 0
+                    ? "No customers found"
+                    : `List of customers: ${customers.length} total`}
+                </TableCaption>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Customer No</TableHead>
+                    <TableHead>Customer Name</TableHead>
+                    <TableHead>Address</TableHead>
+                    <TableHead>Payment Term</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {customers.map((customer) => (
+                    <TableRow key={customer.custno}>
+                      <TableCell className="font-medium">{customer.custno}</TableCell>
+                      <TableCell>{customer.custname || "-"}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">{customer.address || "-"}</TableCell>
+                      <TableCell>{customer.payterm || "-"}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => navigate(`/customers/${customer.custno}`)}
+                          >
+                            View
+                          </Button>
+                          <CustomerActions 
+                            customerNo={customer.custno} 
+                            onEdit={() => handleEditCustomer(customer.custno)}
+                            onDeleted={fetchCustomers}
+                          />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       
       {editingCustomerNo && (
         <EditCustomerDialog

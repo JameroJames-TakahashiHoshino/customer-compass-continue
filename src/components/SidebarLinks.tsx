@@ -1,5 +1,5 @@
 
-import { Home, CreditCard, Users, Settings, Table, Receipt, HelpCircle } from "lucide-react";
+import { Home, CreditCard, Users, Settings, Receipt, HelpCircle } from "lucide-react";
 import { SidebarMenuItem, SidebarMenuButton } from "./ui/sidebar";
 import { NavLink } from "react-router-dom";
 
@@ -13,7 +13,6 @@ export function SidebarLinks() {
         <div className="space-y-1">
           <SidebarItem to="/dashboard" title="Overview" icon={Home} />
           <SidebarItem to="/customers" title="Customers" icon={Users} />
-          <SidebarItem to="/customers-table" title="Customers Table" icon={Table} />
           <SidebarItem to="/payments" title="Payments" icon={CreditCard} />
           <SidebarItem to="/sales" title="Sales" icon={Receipt} />
           <SidebarItem to="/help" title="Help & Support" icon={HelpCircle} />

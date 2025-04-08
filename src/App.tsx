@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +7,6 @@ import Dashboard from "@/pages/Dashboard";
 import ResetPassword from "@/pages/ResetPassword";
 import AdminLogin from "@/pages/AdminLogin";
 import Customers from "@/pages/Customers";
-import CustomersTable from "@/pages/CustomersTable";
 import Sales from "@/pages/Sales";
 import Payments from "@/pages/Payments";
 import CustomerDetail from "@/pages/CustomerDetail";
@@ -21,7 +19,6 @@ import Messages from "@/pages/Messages";
 import Analytics from "@/pages/Analytics";
 import Settings from "@/pages/Settings";
 
-// Protected route that redirects unauthenticated users to index
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
@@ -57,7 +54,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Public route that redirects authenticated users to dashboard
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
@@ -117,7 +113,6 @@ function App() {
           }>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/customers" element={<Customers />} />
-            <Route path="/customers-table" element={<CustomersTable />} />
             <Route path="/customers/:id" element={<CustomerDetail />} />
             <Route path="/customers/new" element={<AddCustomer />} />
             <Route path="/sales" element={<Sales />} />
