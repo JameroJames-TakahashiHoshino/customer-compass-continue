@@ -1,7 +1,5 @@
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   DropdownMenu, 
@@ -9,14 +7,13 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { Bell, Menu, Search, X } from "lucide-react";
+import { Bell, Menu } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 export function Navbar() {
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { toggleSidebar } = useSidebar();
   const navigate = useNavigate();
   
@@ -43,53 +40,27 @@ export function Navbar() {
           <a href="/dashboard" className="font-bold text-lg">ClientChronicle</a>
         </div>
         
-        {isSearchOpen ? (
-          <div className="flex-1 md:w-[400px] flex items-center">
-            <Input
-              className="h-9 rounded-md"
-              placeholder="Search..."
-              autoFocus
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsSearchOpen(false)}
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-        ) : (
-          <div className="flex items-center ml-auto gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsSearchOpen(true)}
-              className="md:flex"
-            >
-              <Search className="h-5 w-5" />
-            </Button>
-            
-            <Button variant="ghost" size="icon">
-              <Bell className="h-5 w-5" />
-            </Button>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src="/placeholder.svg" alt="User" />
-                    <AvatarFallback>U</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => navigate("/profile")}>Profile</DropdownMenuItem>
-                <DropdownMenuItem>Settings</DropdownMenuItem>
-                <DropdownMenuItem onClick={handleSignOut}>Sign out</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        )}
+        <div className="flex items-center ml-auto gap-4">
+          <Button variant="ghost" size="icon">
+            <Bell className="h-5 w-5" />
+          </Button>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src="/placeholder.svg" alt="User" />
+                  <AvatarFallback>U</AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => navigate("/profile")}>Profile</DropdownMenuItem>
+              <DropdownMenuItem>Settings</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSignOut}>Sign out</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </header>
   );

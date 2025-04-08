@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 
 const Profile = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -16,6 +16,9 @@ const Profile = () => {
   const [updating, setUpdating] = useState(false);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -26,6 +29,7 @@ const Profile = () => {
           setUser(user);
           setEmail(user.email || "");
           setName(user.user_metadata?.name || "");
+          setAvatarUrl(user.user_metadata?.avatar_url || null);
         }
       } catch (error) {
         console.error("Error fetching user data:", error);
@@ -37,18 +41,81 @@ const Profile = () => {
     fetchUserData();
   }, []);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error("File size must be less than 2MB");
+        return;
+      }
+      setAvatarFile(file);
+      // Create a preview URL
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setAvatarUrl(event.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadAvatar = async () => {
+    if (!avatarFile || !user) return null;
+    
+    setUploading(true);
+    try {
+      const fileExt = avatarFile.name.split('.').pop();
+      const filePath = `avatars/${user.id}.${fileExt}`;
+
+      // Upload the file to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, avatarFile, {
+          upsert: true,
+          contentType: avatarFile.type
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get the public URL
+      const { data } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      return data.publicUrl;
+    } catch (error: any) {
+      toast.error(`Error uploading avatar: ${error.message}`);
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleUpdateProfile = async () => {
     if (!user) return;
     
     setUpdating(true);
     try {
-      const { error } = await supabase.auth.updateUser({
+      let avatarUrl = null;
+      
+      if (avatarFile) {
+        avatarUrl = await uploadAvatar();
+      }
+
+      const updates = {
         email: email !== user.email ? email : undefined,
-        data: { name }
-      });
+        data: { 
+          name,
+          avatar_url: avatarUrl || user.user_metadata?.avatar_url
+        }
+      };
+
+      const { error } = await supabase.auth.updateUser(updates);
 
       if (error) throw error;
       toast.success("Profile updated successfully");
+      setAvatarFile(null);
     } catch (error: any) {
       toast.error(error.message || "Failed to update profile");
     } finally {
@@ -72,10 +139,26 @@ const Profile = () => {
         <Card>
           <CardHeader className="pb-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src="/placeholder.svg" alt="Profile" />
-                <AvatarFallback>{name.charAt(0) || email.charAt(0)}</AvatarFallback>
-              </Avatar>
+              <div className="relative">
+                <Avatar className="h-24 w-24">
+                  <AvatarImage src={avatarUrl || "/placeholder.svg"} alt="Profile" />
+                  <AvatarFallback>{name.charAt(0) || email.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="absolute bottom-0 right-0">
+                  <Label htmlFor="avatar-upload" className="cursor-pointer">
+                    <div className="bg-primary text-primary-foreground p-1 rounded-full hover:bg-primary/90 transition-colors">
+                      <Upload className="h-4 w-4" />
+                    </div>
+                    <Input 
+                      id="avatar-upload" 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleFileChange} 
+                      className="hidden"
+                    />
+                  </Label>
+                </div>
+              </div>
               <div>
                 <CardTitle>{name || "User"}</CardTitle>
                 <CardDescription>{email}</CardDescription>
@@ -105,10 +188,10 @@ const Profile = () => {
           <CardFooter>
             <Button 
               onClick={handleUpdateProfile} 
-              disabled={updating}
+              disabled={updating || uploading}
               className="ml-auto"
             >
-              {updating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {(updating || uploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Changes
             </Button>
           </CardFooter>

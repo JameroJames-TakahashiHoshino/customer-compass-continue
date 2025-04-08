@@ -11,16 +11,11 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, Loader2 } from "lucide-react";
+import CustomerActions from "@/components/CustomerActions";
+import EditCustomerDialog from "@/components/EditCustomerDialog";
 
 interface CustomerType {
   custno: string;
@@ -34,8 +29,9 @@ const Customers = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [customers, setCustomers] = useState<CustomerType[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
+  const [editingCustomerNo, setEditingCustomerNo] = useState<string | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -95,7 +91,16 @@ const Customers = () => {
     if (session) {
       fetchCustomers();
     }
-  }, [searchTerm, statusFilter]);
+  }, [searchTerm]);
+
+  const handleEditCustomer = (customerNo: string) => {
+    setEditingCustomerNo(customerNo);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleCustomerUpdated = () => {
+    fetchCustomers();
+  };
 
   if (loading && !customers.length) {
     return (
@@ -133,9 +138,18 @@ const Customers = () => {
         {customers.length > 0 ? (
           customers.map(customer => (
             <Card key={customer.custno} className="h-full flex flex-col">
-              <CardHeader className="flex-none">
-                <CardTitle className="text-lg line-clamp-1">{customer.custname || "Unnamed Customer"}</CardTitle>
-                <CardDescription>Customer #{customer.custno}</CardDescription>
+              <CardHeader className="flex-none pb-2">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-lg line-clamp-1">{customer.custname || "Unnamed Customer"}</CardTitle>
+                    <CardDescription>Customer #{customer.custno}</CardDescription>
+                  </div>
+                  <CustomerActions 
+                    customerNo={customer.custno} 
+                    onEdit={() => handleEditCustomer(customer.custno)}
+                    onDeleted={fetchCustomers}
+                  />
+                </div>
               </CardHeader>
               <CardContent className="flex-grow">
                 <div className="space-y-2">
@@ -182,6 +196,15 @@ const Customers = () => {
           </div>
         )}
       </div>
+      
+      {editingCustomerNo && (
+        <EditCustomerDialog
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          customerNo={editingCustomerNo}
+          onUpdated={handleCustomerUpdated}
+        />
+      )}
     </div>
   );
 };

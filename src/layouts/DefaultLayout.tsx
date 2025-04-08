@@ -11,7 +11,7 @@ const DefaultLayout = () => {
         <Navbar />
         <div className="flex flex-1 w-full">
           <Sidebar />
-          <main className="flex-1 overflow-auto w-full">
+          <main className="flex-1 p-0 overflow-auto w-full">
             <Outlet />
           </main>
         </div>
