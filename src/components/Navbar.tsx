@@ -17,7 +17,7 @@ import { toast } from "sonner";
 
 export function Navbar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const { toggleSidebar } = useSidebar(); // Update to use toggleSidebar instead of toggle
+  const { toggleSidebar } = useSidebar();
   const navigate = useNavigate();
   
   const handleSignOut = async () => {
@@ -25,7 +25,8 @@ export function Navbar() {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       toast.success("Signed out successfully");
-      navigate("/"); // Redirect to login page after signing out
+      // Force navigation to root which will then redirect to login page
+      window.location.href = "/";
     } catch (error: any) {
       toast.error(error.message || "Failed to sign out");
     }
@@ -82,7 +83,7 @@ export function Navbar() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>Profile</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/profile")}>Profile</DropdownMenuItem>
                 <DropdownMenuItem>Settings</DropdownMenuItem>
                 <DropdownMenuItem onClick={handleSignOut}>Sign out</DropdownMenuItem>
               </DropdownMenuContent>

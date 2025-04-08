@@ -14,6 +14,8 @@ import Payments from "@/pages/Payments";
 import CustomerDetail from "@/pages/CustomerDetail";
 import DefaultLayout from "@/layouts/DefaultLayout";
 import Help from "@/pages/Help";
+import Profile from "@/pages/Profile";
+import AddCustomer from "@/pages/AddCustomer";
 
 // Protected route that redirects unauthenticated users to index
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -113,9 +115,11 @@ function App() {
             <Route path="/customers" element={<Customers />} />
             <Route path="/customers-table" element={<CustomersTable />} />
             <Route path="/customers/:id" element={<CustomerDetail />} />
+            <Route path="/customers/new" element={<AddCustomer />} />
             <Route path="/sales" element={<Sales />} />
             <Route path="/payments" element={<Payments />} />
             <Route path="/help" element={<Help />} />
+            <Route path="/profile" element={<Profile />} />
           </Route>
           
           <Route path="*" element={<NotFound />} />

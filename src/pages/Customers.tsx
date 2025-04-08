@@ -106,7 +106,7 @@ const Customers = () => {
   }
 
   return (
-    <div className="flex-1 space-y-4 pt-6">
+    <div className="flex-1 space-y-4 p-6 w-full max-w-full">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Customers</h2>
         <Button asChild>
@@ -129,23 +129,23 @@ const Customers = () => {
         </div>
       </div>
       
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {customers.length > 0 ? (
           customers.map(customer => (
             <Card key={customer.custno} className="h-full flex flex-col">
               <CardHeader className="flex-none">
-                <CardTitle className="text-lg">{customer.custname || "Unnamed Customer"}</CardTitle>
+                <CardTitle className="text-lg line-clamp-1">{customer.custname || "Unnamed Customer"}</CardTitle>
                 <CardDescription>Customer #{customer.custno}</CardDescription>
               </CardHeader>
               <CardContent className="flex-grow">
                 <div className="space-y-2">
                   <div className="text-sm">
                     <span className="font-medium">Address: </span>
-                    <span className="break-words">{customer.address || "No address provided"}</span>
+                    <span className="line-clamp-2">{customer.address || "No address provided"}</span>
                   </div>
                   <div className="text-sm">
                     <span className="font-medium">Payment Terms: </span>
-                    <span className="break-words">{customer.payterm || "Not specified"}</span>
+                    <span className="line-clamp-1">{customer.payterm || "Not specified"}</span>
                   </div>
                 </div>
               </CardContent>

@@ -16,6 +16,11 @@ body, html {
   overflow-x: hidden;
 }
 
+/* Ensure content fills available space */
+.max-w-full {
+  max-width: 100% !important;
+}
+
 .logo {
   height: 6em;
   padding: 1.5em;

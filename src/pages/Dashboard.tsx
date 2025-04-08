@@ -107,7 +107,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="w-full max-w-[1400px] mx-auto py-6 px-4">
+    <div className="w-full max-w-full py-6 px-4">
       <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -213,6 +213,6 @@ const Dashboard = () => {
       </div>
     </div>
   );
-};
+}
 
 export default Dashboard;
