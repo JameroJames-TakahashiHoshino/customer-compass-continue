@@ -11,7 +11,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { Home, Users, PieChart, Settings, Mail, Calendar, HelpCircle, CreditCard, Table, Receipt } from "lucide-react";
+import { Home, Users, PieChart, Settings, Mail, Calendar, HelpCircle, CreditCard, Receipt } from "lucide-react";
 
 export function Sidebar() {
   return (
@@ -40,17 +40,6 @@ export function Sidebar() {
                   >
                     <Users className="h-4 w-4 mr-2" />
                     <span>Customers</span>
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <NavLink
-                    to="/customers-table"
-                    className={({ isActive }) => isActive ? "text-primary" : ""}
-                  >
-                    <Table className="h-4 w-4 mr-2" />
-                    <span>Customers Table</span>
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>

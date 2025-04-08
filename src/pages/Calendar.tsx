@@ -4,68 +4,152 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { format, parse } from "date-fns";
+import { useState, useEffect } from "react";
+import { format, isValid, parse } from "date-fns";
 import { CalendarRange, CalendarSearch } from "lucide-react";
+import { toast } from "sonner";
+
+// Mock event data structure
+interface CalendarEvent {
+  id: string;
+  title: string;
+  date: Date;
+  description: string;
+}
 
 const CalendarPage = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [yearInput, setYearInput] = useState<string>(format(new Date(), "yyyy"));
   const [monthInput, setMonthInput] = useState<string>(format(new Date(), "MM"));
   const [dayInput, setDayInput] = useState<string>(format(new Date(), "dd"));
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [currentEvents, setCurrentEvents] = useState<CalendarEvent[]>([]);
   
+  // Mock events data - in a real app this would come from a database
+  useEffect(() => {
+    const mockEvents: CalendarEvent[] = [
+      {
+        id: "1",
+        title: "Client Meeting",
+        date: new Date(2025, 3, 10), // April 10, 2025
+        description: "Discuss project requirements with new client"
+      },
+      {
+        id: "2",
+        title: "Follow-up Call",
+        date: new Date(2025, 3, 12), // April 12, 2025
+        description: "Call with marketing team about campaign updates"
+      },
+      {
+        id: "3", 
+        title: "Product Demo",
+        date: new Date(2025, 3, 15), // April 15, 2025
+        description: "Show new features to potential clients"
+      },
+      {
+        id: "4",
+        title: "Team Meeting",
+        date: new Date(), // Today
+        description: "Weekly team sync meeting"
+      }
+    ];
+    
+    setEvents(mockEvents);
+  }, []);
+  
+  // Update current events whenever date changes
+  useEffect(() => {
+    if (date) {
+      // Filter events for the selected date
+      const selectedDateEvents = events.filter(event => {
+        const eventDate = new Date(event.date);
+        return (
+          eventDate.getDate() === date.getDate() &&
+          eventDate.getMonth() === date.getMonth() &&
+          eventDate.getFullYear() === date.getFullYear()
+        );
+      });
+      
+      setCurrentEvents(selectedDateEvents);
+    } else {
+      setCurrentEvents([]);
+    }
+  }, [date, events]);
+
   const handleGoToDate = () => {
     try {
-      // Validate inputs
+      // First, validate each piece separately
+      if (!yearInput.match(/^\d{4}$/)) {
+        toast.error("Year must be a 4-digit number");
+        return;
+      }
+      
+      if (!monthInput.match(/^(0?[1-9]|1[0-2])$/)) {
+        toast.error("Month must be a number between 1-12");
+        return;
+      }
+      
+      if (!dayInput.match(/^(0?[1-9]|[12][0-9]|3[01])$/)) {
+        toast.error("Day must be a number between 1-31");
+        return;
+      }
+      
+      // Validate inputs and parse into numbers
       const year = parseInt(yearInput);
       const month = parseInt(monthInput) - 1; // JavaScript months are 0-indexed
       const day = parseInt(dayInput);
       
-      // Basic validation
-      if (isNaN(year) || isNaN(month) || isNaN(day)) {
-        console.error("Invalid date inputs");
+      // Additional validation
+      if (year < 1900 || year > 2100) {
+        toast.error("Year must be between 1900 and 2100");
         return;
       }
       
-      if (year < 1900 || year > 2100 || month < 0 || month > 11 || day < 1 || day > 31) {
-        console.error("Date out of acceptable range");
-        return;
-      }
-      
+      // Create the date object
       const newDate = new Date(year, month, day);
       
-      // Check if date is valid
-      if (isNaN(newDate.getTime())) {
-        console.error("Invalid date");
+      // Validate that the resulting date is valid
+      // This catches invalid dates like February 30
+      if (!isValid(newDate) || newDate.getMonth() !== month) {
+        toast.error("The specified date is invalid");
         return;
       }
       
+      // Valid date - update the state
       setDate(newDate);
+      toast.success(`Navigated to ${format(newDate, "MMMM d, yyyy")}`);
     } catch (error) {
       console.error("Error setting date:", error);
+      toast.error("Could not set the date. Please check your input.");
+    }
+  };
+  
+  const handleDateSelect = (selectedDate: Date | undefined) => {
+    if (selectedDate) {
+      setDate(selectedDate);
+      setYearInput(format(selectedDate, "yyyy"));
+      setMonthInput(format(selectedDate, "MM"));
+      setDayInput(format(selectedDate, "dd"));
     }
   };
   
   const handleMonthChange = (value: string) => {
-    // Validate month input (1-12)
-    const month = parseInt(value);
-    if ((month >= 1 && month <= 12) || value === "") {
+    // Allow empty input or numbers 1-12 (will format to 01-12 when selecting date)
+    if (value === "" || (parseInt(value) >= 1 && parseInt(value) <= 12) || value.match(/^0[1-9]|1[0-2]$/)) {
       setMonthInput(value);
     }
   };
   
   const handleDayChange = (value: string) => {
-    // Validate day input (1-31)
-    const day = parseInt(value);
-    if ((day >= 1 && day <= 31) || value === "") {
+    // Allow empty input or numbers 1-31 (will format to 01-31 when selecting date)
+    if (value === "" || (parseInt(value) >= 1 && parseInt(value) <= 31) || value.match(/^0[1-9]|[1-2][0-9]|3[0-1]$/)) {
       setDayInput(value);
     }
   };
   
   const handleYearChange = (value: string) => {
-    // Validate year input (1900-2100)
-    const year = parseInt(value);
-    if ((year >= 1900 && year <= 2100) || value === "" || isNaN(year)) {
+    // Only allow numbers for year
+    if (value === "" || value.match(/^\d{0,4}$/)) {
       setYearInput(value);
     }
   };
@@ -76,6 +160,12 @@ const CalendarPage = () => {
     setYearInput(format(today, "yyyy"));
     setMonthInput(format(today, "MM"));
     setDayInput(format(today, "dd"));
+  };
+  
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleGoToDate();
+    }
   };
 
   return (
@@ -97,6 +187,7 @@ const CalendarPage = () => {
                     id="month"
                     value={monthInput}
                     onChange={(e) => handleMonthChange(e.target.value)}
+                    onKeyPress={handleKeyPress}
                     className="w-[80px]"
                     placeholder="MM"
                   />
@@ -107,6 +198,7 @@ const CalendarPage = () => {
                     id="day"
                     value={dayInput}
                     onChange={(e) => handleDayChange(e.target.value)}
+                    onKeyPress={handleKeyPress}
                     className="w-[80px]"
                     placeholder="DD"
                   />
@@ -117,6 +209,7 @@ const CalendarPage = () => {
                     id="year"
                     value={yearInput}
                     onChange={(e) => handleYearChange(e.target.value)}
+                    onKeyPress={handleKeyPress}
                     className="w-[100px]"
                     placeholder="YYYY"
                   />
@@ -137,7 +230,7 @@ const CalendarPage = () => {
             <Calendar
               mode="single"
               selected={date}
-              onSelect={setDate}
+              onSelect={handleDateSelect}
               className="rounded-md border"
               onMonthChange={(newDate) => {
                 setYearInput(format(newDate, "yyyy"));
@@ -150,24 +243,40 @@ const CalendarPage = () => {
         <Card className="col-span-1 lg:col-span-2">
           <CardHeader>
             <CardTitle>
-              {date ? date.toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              }) : 'No Date Selected'}
+              {date ? format(date, "EEEE, MMMM d, yyyy") : 'No Date Selected'}
             </CardTitle>
             <CardDescription>Events for this date</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">No events scheduled for this date.</p>
+                <p className="text-sm text-muted-foreground">
+                  {currentEvents.length === 0 ? "No events scheduled for this date." : `${currentEvents.length} event(s) scheduled`}
+                </p>
                 <Button variant="outline" size="sm">
                   <CalendarRange className="mr-2 h-4 w-4" />
                   Add Event
                 </Button>
               </div>
+              
+              {currentEvents.length > 0 && (
+                <div className="space-y-3 mt-4">
+                  {currentEvents.map((event) => (
+                    <Card key={event.id} className="p-4 shadow-sm">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-medium">{event.title}</h3>
+                          <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button size="sm" variant="ghost">Edit</Button>
+                          <Button size="sm" variant="ghost" className="text-destructive">Delete</Button>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
 
 interface PaymentType {
   orno: string;
@@ -36,10 +37,12 @@ const Payments = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [searching, setSearching] = useState(false);
   const [payments, setPayments] = useState<PaymentType[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [noResults, setNoResults] = useState(false);
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -67,10 +70,11 @@ const Payments = () => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate, currentPage, searchTerm]);
+  }, [navigate, currentPage]);
 
   const fetchPayments = async () => {
     setLoading(true);
+    setNoResults(false);
     try {
       // Calculate pagination range
       const from = (currentPage - 1) * itemsPerPage;
@@ -81,9 +85,9 @@ const Payments = () => {
         .select('*', { count: 'exact' });
 
       // Apply search filter if searchTerm exists
-      if (searchTerm) {
+      if (searchTerm.trim()) {
         query = query
-          .or(`orno.ilike.%${searchTerm}%,transno.ilike.%${searchTerm}%`);
+          .or(`orno.ilike.%${searchTerm.trim()}%,transno.ilike.%${searchTerm.trim()}%`);
       }
 
       // Get paginated results
@@ -93,10 +97,18 @@ const Payments = () => {
 
       if (error) {
         console.error('Error fetching payments:', error);
+        toast.error("Error fetching payment data");
         return;
       }
 
       setPayments(data as PaymentType[]);
+      
+      // Set no results flag
+      if (data && data.length === 0 && searchTerm.trim()) {
+        setNoResults(true);
+      } else {
+        setNoResults(false);
+      }
       
       // Calculate total pages
       if (count !== null) {
@@ -104,15 +116,28 @@ const Payments = () => {
       }
     } catch (error) {
       console.error('Error:', error);
+      toast.error("An error occurred while fetching data");
     } finally {
       setLoading(false);
+      setSearching(false);
     }
   };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    setSearching(true);
     setCurrentPage(1); // Reset to first page when searching
     fetchPayments();
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    if (e.target.value === '') {
+      // Clear search and reset results if search box is cleared
+      setSearchTerm('');
+      setCurrentPage(1);
+      fetchPayments();
+    }
   };
 
   const handlePageChange = (page: number) => {
@@ -154,11 +179,15 @@ const Payments = () => {
               type="search"
               placeholder="Search payments..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleSearchChange}
               className="w-full"
             />
-            <Button type="submit">
-              <Search className="h-4 w-4 mr-2" />
+            <Button type="submit" disabled={searching}>
+              {searching ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Search className="h-4 w-4 mr-2" />
+              )}
               Search
             </Button>
           </form>
@@ -173,9 +202,11 @@ const Payments = () => {
               <div className="rounded-md border">
                 <Table>
                   <TableCaption>
-                    {payments.length === 0
-                      ? "No payments found"
-                      : `Showing ${payments.length} of ${totalPages * itemsPerPage} payments`}
+                    {noResults
+                      ? `No results found for "${searchTerm}"`
+                      : payments.length === 0
+                        ? "No payments found"
+                        : `Showing ${payments.length} of ${totalPages * itemsPerPage} payments`}
                   </TableCaption>
                   <TableHeader>
                     <TableRow>
@@ -186,14 +217,24 @@ const Payments = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {payments.map((payment) => (
-                      <TableRow key={payment.orno}>
-                        <TableCell className="font-medium">{payment.orno}</TableCell>
-                        <TableCell>{payment.transno || "-"}</TableCell>
-                        <TableCell>{formatDate(payment.paydate)}</TableCell>
-                        <TableCell>{formatCurrency(payment.amount)}</TableCell>
+                    {payments.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                          {noResults 
+                            ? `No results found for "${searchTerm}"`
+                            : "No payment records available"}
+                        </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      payments.map((payment) => (
+                        <TableRow key={payment.orno}>
+                          <TableCell className="font-medium">{payment.orno}</TableCell>
+                          <TableCell>{payment.transno || "-"}</TableCell>
+                          <TableCell>{formatDate(payment.paydate)}</TableCell>
+                          <TableCell>{formatCurrency(payment.amount)}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
