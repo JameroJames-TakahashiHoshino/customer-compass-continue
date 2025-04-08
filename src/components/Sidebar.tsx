@@ -11,7 +11,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { Home, Users, PieChart, Settings, Mail, Calendar, HelpCircle } from "lucide-react";
+import { Home, Users, PieChart, Settings, Mail, Calendar, HelpCircle, CreditCard, Table, Receipt } from "lucide-react";
 
 export function Sidebar() {
   return (
@@ -46,6 +46,17 @@ export function Sidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <NavLink
+                    to="/customers-table"
+                    className={({ isActive }) => isActive ? "text-primary" : ""}
+                  >
+                    <Table className="h-4 w-4 mr-2" />
+                    <span>Customers Table</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <NavLink
                     to="/calendar"
                     className={({ isActive }) => isActive ? "text-primary" : ""}
                   >
@@ -73,6 +84,28 @@ export function Sidebar() {
                   >
                     <PieChart className="h-4 w-4 mr-2" />
                     <span>Analytics</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <NavLink
+                    to="/payments"
+                    className={({ isActive }) => isActive ? "text-primary" : ""}
+                  >
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    <span>Payments</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <NavLink
+                    to="/sales"
+                    className={({ isActive }) => isActive ? "text-primary" : ""}
+                  >
+                    <Receipt className="h-4 w-4 mr-2" />
+                    <span>Sales</span>
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>

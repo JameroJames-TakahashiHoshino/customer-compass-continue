@@ -16,6 +16,10 @@ import DefaultLayout from "@/layouts/DefaultLayout";
 import Help from "@/pages/Help";
 import Profile from "@/pages/Profile";
 import AddCustomer from "@/pages/AddCustomer";
+import Calendar from "@/pages/Calendar";
+import Messages from "@/pages/Messages";
+import Analytics from "@/pages/Analytics";
+import Settings from "@/pages/Settings";
 
 // Protected route that redirects unauthenticated users to index
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -120,6 +124,10 @@ function App() {
             <Route path="/payments" element={<Payments />} />
             <Route path="/help" element={<Help />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/calendar" element={<Calendar />} />
+            <Route path="/messages" element={<Messages />} />
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/settings" element={<Settings />} />
           </Route>
           
           <Route path="*" element={<NotFound />} />

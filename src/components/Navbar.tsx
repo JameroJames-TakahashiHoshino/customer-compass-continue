@@ -56,7 +56,7 @@ export function Navbar() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => navigate("/profile")}>Profile</DropdownMenuItem>
-              <DropdownMenuItem>Settings</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/settings")}>Settings</DropdownMenuItem>
               <DropdownMenuItem onClick={handleSignOut}>Sign out</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

@@ -69,7 +69,7 @@ const Profile = () => {
       const filePath = `avatars/${user.id}.${fileExt}`;
 
       // Upload the file to Supabase Storage
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError, data } = await supabase.storage
         .from('avatars')
         .upload(filePath, avatarFile, {
           upsert: true,
@@ -79,11 +79,11 @@ const Profile = () => {
       if (uploadError) throw uploadError;
 
       // Get the public URL
-      const { data } = supabase.storage
+      const { data: urlData } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
 
-      return data.publicUrl;
+      return urlData.publicUrl;
     } catch (error: any) {
       toast.error(`Error uploading avatar: ${error.message}`);
       return null;
@@ -97,17 +97,16 @@ const Profile = () => {
     
     setUpdating(true);
     try {
-      let avatarUrl = null;
+      let newAvatarUrl = null;
       
       if (avatarFile) {
-        avatarUrl = await uploadAvatar();
+        newAvatarUrl = await uploadAvatar();
       }
 
       const updates = {
-        email: email !== user.email ? email : undefined,
         data: { 
           name,
-          avatar_url: avatarUrl || user.user_metadata?.avatar_url
+          avatar_url: newAvatarUrl || user.user_metadata?.avatar_url
         }
       };
 
@@ -180,9 +179,12 @@ const Profile = () => {
               <Input
                 id="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                readOnly
                 placeholder="Your email"
+                disabled
+                className="bg-muted"
               />
+              <p className="text-xs text-muted-foreground">Email cannot be changed. Contact support for assistance.</p>
             </div>
           </CardContent>
           <CardFooter>
