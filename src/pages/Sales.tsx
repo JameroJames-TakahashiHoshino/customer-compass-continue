@@ -26,6 +26,7 @@ import { Search, Loader2, Eye } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { useDebounce } from "@/hooks/use-debounce";
 
 interface SalesType {
   transno: string;
@@ -45,9 +46,9 @@ const Sales = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [searching, setSearching] = useState(false);
   const [sales, setSales] = useState<SalesType[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [noResults, setNoResults] = useState(false);
@@ -80,6 +81,12 @@ const Sales = () => {
     };
   }, [navigate, currentPage]);
 
+  // Effect to handle search term changes
+  useEffect(() => {
+    setCurrentPage(1); // Reset to first page when search term changes
+    fetchSales();
+  }, [debouncedSearchTerm]);
+
   const fetchSales = async () => {
     setLoading(true);
     setNoResults(false);
@@ -97,9 +104,9 @@ const Sales = () => {
         `, { count: 'exact' });
 
       // Apply search filter if searchTerm exists
-      if (searchTerm.trim()) {
+      if (debouncedSearchTerm.trim()) {
         query = query
-          .or(`transno.ilike.%${searchTerm.trim()}%,custno.ilike.%${searchTerm.trim()}%,empno.ilike.%${searchTerm.trim()}%`);
+          .or(`transno.ilike.%${debouncedSearchTerm.trim()}%,custno.ilike.%${debouncedSearchTerm.trim()}%,empno.ilike.%${debouncedSearchTerm.trim()}%`);
       }
 
       // Get paginated results
@@ -116,7 +123,7 @@ const Sales = () => {
       setSales(data as SalesType[]);
       
       // Set no results flag
-      if (data && data.length === 0 && searchTerm.trim()) {
+      if (data && data.length === 0 && debouncedSearchTerm.trim()) {
         setNoResults(true);
       } else {
         setNoResults(false);
@@ -131,25 +138,11 @@ const Sales = () => {
       toast.error("An error occurred while fetching data");
     } finally {
       setLoading(false);
-      setSearching(false);
     }
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSearching(true);
-    setCurrentPage(1); // Reset to first page when searching
-    fetchSales();
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
-    if (e.target.value === '') {
-      // Clear search and reset results if search box is cleared
-      setSearchTerm('');
-      setCurrentPage(1);
-      fetchSales();
-    }
   };
 
   const handlePageChange = (page: number) => {
@@ -157,7 +150,6 @@ const Sales = () => {
   };
 
   const handleViewSale = (transno: string) => {
-    // In a real app, this would navigate to a sales detail page
     toast.info(`Viewing sale ${transno}`);
     // For now we just show a toast since the detail page doesn't exist yet
     // navigate(`/sales/${transno}`);
@@ -199,7 +191,7 @@ const Sales = () => {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle>Sales Records</CardTitle>
-          <form onSubmit={handleSearch} className="flex w-full max-w-sm items-center space-x-2 mt-2">
+          <div className="flex w-full max-w-sm items-center space-x-2 mt-2">
             <Input
               type="search"
               placeholder="Search sales transactions..."
@@ -207,15 +199,8 @@ const Sales = () => {
               onChange={handleSearchChange}
               className="w-full"
             />
-            <Button type="submit" disabled={searching}>
-              {searching ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Search className="h-4 w-4 mr-2" />
-              )}
-              Search
-            </Button>
-          </form>
+            <Search className="h-4 w-4 text-muted-foreground" />
+          </div>
         </CardHeader>
         <CardContent>
           {loading && sales.length > 0 ? (
@@ -228,7 +213,7 @@ const Sales = () => {
                 <Table>
                   <TableCaption>
                     {noResults
-                      ? `No results found for "${searchTerm}"`
+                      ? `No results found for "${debouncedSearchTerm}"`
                       : sales.length === 0
                         ? "No sales found"
                         : `Showing ${sales.length} of ${totalPages * itemsPerPage} sales records`}
@@ -247,7 +232,7 @@ const Sales = () => {
                       <TableRow>
                         <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                           {noResults 
-                            ? `No results found for "${searchTerm}"`
+                            ? `No results found for "${debouncedSearchTerm}"`
                             : "No sales records available"}
                         </TableCell>
                       </TableRow>

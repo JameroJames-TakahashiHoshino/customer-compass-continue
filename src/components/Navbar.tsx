@@ -12,10 +12,17 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useState } from "react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 export function Navbar() {
   const { toggleSidebar } = useSidebar();
   const navigate = useNavigate();
+  const [notificationCount, setNotificationCount] = useState(3);
   
   const handleSignOut = async () => {
     try {
@@ -27,6 +34,11 @@ export function Navbar() {
     } catch (error: any) {
       toast.error(error.message || "Failed to sign out");
     }
+  };
+
+  const handleNotificationClick = () => {
+    toast.info("Notifications viewed");
+    setNotificationCount(0);
   };
 
   return (
@@ -41,9 +53,46 @@ export function Navbar() {
         </div>
         
         <div className="flex items-center ml-auto gap-4">
-          <Button variant="ghost" size="icon">
-            <Bell className="h-5 w-5" />
-          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={handleNotificationClick}>
+                <div className="relative">
+                  <Bell className="h-5 w-5" />
+                  {notificationCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                      {notificationCount}
+                    </span>
+                  )}
+                </div>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="space-y-2">
+                <h4 className="font-medium">Notifications</h4>
+                <div className="border-t pt-2">
+                  <div className="text-sm">
+                    <p className="font-medium">New message from client</p>
+                    <p className="text-muted-foreground">John Smith sent you a message</p>
+                    <p className="text-xs text-muted-foreground mt-1">2 hours ago</p>
+                  </div>
+                </div>
+                <div className="border-t pt-2">
+                  <div className="text-sm">
+                    <p className="font-medium">Payment received</p>
+                    <p className="text-muted-foreground">$250.00 from ABC Company</p>
+                    <p className="text-xs text-muted-foreground mt-1">Yesterday</p>
+                  </div>
+                </div>
+                <div className="border-t pt-2">
+                  <div className="text-sm">
+                    <p className="font-medium">Meeting reminder</p>
+                    <p className="text-muted-foreground">Team meeting at 3:00 PM</p>
+                    <p className="text-xs text-muted-foreground mt-1">Tomorrow</p>
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

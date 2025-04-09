@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import AuthForm from "@/components/AuthForm";
-import { KeyRound, Shield } from "lucide-react";
+import { Shield } from "lucide-react";
 
 export default function IndexPage() {
   return (
@@ -14,7 +14,7 @@ export default function IndexPage() {
           <p className="text-lg text-muted-foreground mt-2">Manage your customers and transactions</p>
         </div>
         
-        <AuthForm />
+        <AuthForm showForgotPassword={false} />
         
         <div className="text-center">
           <p className="text-sm text-muted-foreground mb-2">Are you an administrator?</p>

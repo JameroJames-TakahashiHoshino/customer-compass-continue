@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Search, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import { useDebounce } from "@/hooks/use-debounce";
 
 interface PaymentType {
   orno: string;
@@ -37,9 +38,9 @@ const Payments = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [searching, setSearching] = useState(false);
   const [payments, setPayments] = useState<PaymentType[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [noResults, setNoResults] = useState(false);
@@ -72,6 +73,12 @@ const Payments = () => {
     };
   }, [navigate, currentPage]);
 
+  // Effect to handle search term changes
+  useEffect(() => {
+    setCurrentPage(1); // Reset to first page when search term changes
+    fetchPayments();
+  }, [debouncedSearchTerm]);
+
   const fetchPayments = async () => {
     setLoading(true);
     setNoResults(false);
@@ -85,9 +92,9 @@ const Payments = () => {
         .select('*', { count: 'exact' });
 
       // Apply search filter if searchTerm exists
-      if (searchTerm.trim()) {
+      if (debouncedSearchTerm.trim()) {
         query = query
-          .or(`orno.ilike.%${searchTerm.trim()}%,transno.ilike.%${searchTerm.trim()}%`);
+          .or(`orno.ilike.%${debouncedSearchTerm.trim()}%,transno.ilike.%${debouncedSearchTerm.trim()}%`);
       }
 
       // Get paginated results
@@ -104,7 +111,7 @@ const Payments = () => {
       setPayments(data as PaymentType[]);
       
       // Set no results flag
-      if (data && data.length === 0 && searchTerm.trim()) {
+      if (data && data.length === 0 && debouncedSearchTerm.trim()) {
         setNoResults(true);
       } else {
         setNoResults(false);
@@ -119,25 +126,11 @@ const Payments = () => {
       toast.error("An error occurred while fetching data");
     } finally {
       setLoading(false);
-      setSearching(false);
     }
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSearching(true);
-    setCurrentPage(1); // Reset to first page when searching
-    fetchPayments();
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
-    if (e.target.value === '') {
-      // Clear search and reset results if search box is cleared
-      setSearchTerm('');
-      setCurrentPage(1);
-      fetchPayments();
-    }
   };
 
   const handlePageChange = (page: number) => {
@@ -174,7 +167,7 @@ const Payments = () => {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle>Payment Records</CardTitle>
-          <form onSubmit={handleSearch} className="flex w-full max-w-sm items-center space-x-2 mt-2">
+          <div className="flex w-full max-w-sm items-center space-x-2 mt-2">
             <Input
               type="search"
               placeholder="Search payments..."
@@ -182,15 +175,8 @@ const Payments = () => {
               onChange={handleSearchChange}
               className="w-full"
             />
-            <Button type="submit" disabled={searching}>
-              {searching ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Search className="h-4 w-4 mr-2" />
-              )}
-              Search
-            </Button>
-          </form>
+            <Search className="h-4 w-4 text-muted-foreground" />
+          </div>
         </CardHeader>
         <CardContent>
           {loading && payments.length > 0 ? (
@@ -203,7 +189,7 @@ const Payments = () => {
                 <Table>
                   <TableCaption>
                     {noResults
-                      ? `No results found for "${searchTerm}"`
+                      ? `No results found for "${debouncedSearchTerm}"`
                       : payments.length === 0
                         ? "No payments found"
                         : `Showing ${payments.length} of ${totalPages * itemsPerPage} payments`}
@@ -221,7 +207,7 @@ const Payments = () => {
                       <TableRow>
                         <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                           {noResults 
-                            ? `No results found for "${searchTerm}"`
+                            ? `No results found for "${debouncedSearchTerm}"`
                             : "No payment records available"}
                         </TableCell>
                       </TableRow>
