@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -73,9 +72,8 @@ const Payments = () => {
     };
   }, [navigate, currentPage]);
 
-  // Effect to handle search term changes
   useEffect(() => {
-    setCurrentPage(1); // Reset to first page when search term changes
+    setCurrentPage(1);
     fetchPayments();
   }, [debouncedSearchTerm]);
 
@@ -83,7 +81,6 @@ const Payments = () => {
     setLoading(true);
     setNoResults(false);
     try {
-      // Calculate pagination range
       const from = (currentPage - 1) * itemsPerPage;
       const to = from + itemsPerPage - 1;
 
@@ -91,13 +88,11 @@ const Payments = () => {
         .from('payment')
         .select('*', { count: 'exact' });
 
-      // Apply search filter if searchTerm exists
       if (debouncedSearchTerm.trim()) {
         query = query
           .or(`orno.ilike.%${debouncedSearchTerm.trim()}%,transno.ilike.%${debouncedSearchTerm.trim()}%`);
       }
 
-      // Get paginated results
       const { data, count, error } = await query
         .range(from, to)
         .order('orno', { ascending: true });
@@ -110,14 +105,12 @@ const Payments = () => {
 
       setPayments(data as PaymentType[]);
       
-      // Set no results flag
       if (data && data.length === 0 && debouncedSearchTerm.trim()) {
         setNoResults(true);
       } else {
         setNoResults(false);
       }
       
-      // Calculate total pages
       if (count !== null) {
         setTotalPages(Math.ceil(count / itemsPerPage));
       }
@@ -203,16 +196,10 @@ const Payments = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {payments.length === 0 && noResults ? (
+                    {payments.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                          No results found for "{debouncedSearchTerm}"
-                        </TableCell>
-                      </TableRow>
-                    ) : payments.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                          No payment records available
+                          {noResults ? `No results found for "${debouncedSearchTerm}"` : "No payment records available"}
                         </TableCell>
                       </TableRow>
                     ) : (

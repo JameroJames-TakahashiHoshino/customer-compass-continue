@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +19,9 @@ import Calendar from "@/pages/Calendar";
 import Messages from "@/pages/Messages";
 import Analytics from "@/pages/Analytics";
 import Settings from "@/pages/Settings";
+
+// Create a new component for SalesDetail
+import SalesDetail from "@/pages/SalesDetail";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
@@ -116,6 +120,7 @@ function App() {
             <Route path="/customers/:id" element={<CustomerDetail />} />
             <Route path="/customers/new" element={<AddCustomer />} />
             <Route path="/sales" element={<Sales />} />
+            <Route path="/sales-detail/:id" element={<SalesDetail />} />
             <Route path="/payments" element={<Payments />} />
             <Route path="/help" element={<Help />} />
             <Route path="/profile" element={<Profile />} />

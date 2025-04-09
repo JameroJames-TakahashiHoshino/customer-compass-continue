@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { MessageSquare, Send, User } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 
 const customers = [
@@ -103,6 +103,11 @@ const MessagesPage = () => {
       handleSendMessage();
     }
   };
+
+  // Handle search term changes
+  useEffect(() => {
+    // No need for additional logic here as the filtering is done in the render
+  }, [debouncedSearchTerm]);
 
   return (
     <div className="container mx-auto p-6">

@@ -117,6 +117,17 @@ const CalendarPage = () => {
       
       // Valid date - update the state
       setDate(newDate);
+      
+      // Also update the calendar view to match the selected date
+      setTimeout(() => {
+        // Force calendar to update to the new month/year
+        const calendarElement = document.querySelector('.rdp-month');
+        if (calendarElement) {
+          calendarElement.setAttribute('data-year', year.toString());
+          calendarElement.setAttribute('data-month', month.toString());
+        }
+      }, 50);
+      
       toast.success(`Navigated to ${format(newDate, "MMMM d, yyyy")}`);
     } catch (error) {
       console.error("Error setting date:", error);
@@ -133,21 +144,24 @@ const CalendarPage = () => {
     }
   };
   
-  const handleMonthChange = (value: string) => {
-    // Allow empty input or numbers 1-12 (will format to 01-12 when selecting date)
-    if (value === "" || (parseInt(value) >= 1 && parseInt(value) <= 12) || value.match(/^0[1-9]|1[0-2]$/)) {
+  const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Allow empty input or numbers 1-12
+    if (value === "" || (parseInt(value) >= 0 && parseInt(value) <= 12) || value.match(/^0[1-9]|1[0-2]$/)) {
       setMonthInput(value);
     }
   };
   
-  const handleDayChange = (value: string) => {
-    // Allow empty input or numbers 1-31 (will format to 01-31 when selecting date)
-    if (value === "" || (parseInt(value) >= 1 && parseInt(value) <= 31) || value.match(/^0[1-9]|[1-2][0-9]|3[0-1]$/)) {
+  const handleDayChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Allow empty input or numbers 1-31
+    if (value === "" || (parseInt(value) >= 0 && parseInt(value) <= 31) || value.match(/^0[1-9]|[1-2][0-9]|3[0-1]$/)) {
       setDayInput(value);
     }
   };
   
-  const handleYearChange = (value: string) => {
+  const handleYearChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
     // Only allow numbers for year
     if (value === "" || value.match(/^\d{0,4}$/)) {
       setYearInput(value);
@@ -186,7 +200,7 @@ const CalendarPage = () => {
                   <Input
                     id="month"
                     value={monthInput}
-                    onChange={(e) => handleMonthChange(e.target.value)}
+                    onChange={handleMonthChange}
                     onKeyPress={handleKeyPress}
                     className="w-[80px]"
                     placeholder="MM"
@@ -197,7 +211,7 @@ const CalendarPage = () => {
                   <Input
                     id="day"
                     value={dayInput}
-                    onChange={(e) => handleDayChange(e.target.value)}
+                    onChange={handleDayChange}
                     onKeyPress={handleKeyPress}
                     className="w-[80px]"
                     placeholder="DD"
@@ -208,7 +222,7 @@ const CalendarPage = () => {
                   <Input
                     id="year"
                     value={yearInput}
-                    onChange={(e) => handleYearChange(e.target.value)}
+                    onChange={handleYearChange}
                     onKeyPress={handleKeyPress}
                     className="w-[100px]"
                     placeholder="YYYY"
@@ -231,7 +245,8 @@ const CalendarPage = () => {
               mode="single"
               selected={date}
               onSelect={handleDateSelect}
-              className="rounded-md border"
+              className="rounded-md border pointer-events-auto"
+              month={date}
               onMonthChange={(newDate) => {
                 setYearInput(format(newDate, "yyyy"));
                 setMonthInput(format(newDate, "MM"));

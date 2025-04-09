@@ -32,7 +32,6 @@ interface SalesType {
   transno: string;
   salesdate: string | null;
   custno: string | null;
-  empno: string | null;
   customer?: {
     custname: string | null;
   };
@@ -145,9 +144,8 @@ const Sales = () => {
   };
 
   const handleViewSale = (transno: string) => {
-    toast.info(`Viewing sale ${transno}`);
-    // For now we just show a toast since the detail page doesn't exist yet
-    // navigate(`/sales/${transno}`);
+    // Navigate to the sales detail page
+    navigate(`/sales-detail/${transno}`);
   };
 
   if (loading && !sales.length) {
@@ -215,16 +213,10 @@ const Sales = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sales.length === 0 && noResults ? (
+                    {sales.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                          No results found for "{debouncedSearchTerm}"
-                        </TableCell>
-                      </TableRow>
-                    ) : sales.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                          No sales records available
+                          {noResults ? `No results found for "${debouncedSearchTerm}"` : "No sales records available"}
                         </TableCell>
                       </TableRow>
                     ) : (

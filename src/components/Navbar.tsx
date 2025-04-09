@@ -72,7 +72,7 @@ export function Navbar() {
                 <div className="border-t pt-2">
                   <div className="text-sm">
                     <p className="font-medium">New message from client</p>
-                    <p className="text-muted-foreground">John Smith sent you a message</p>
+                    <p className="text-muted-foreground">ABC Company sent you a message</p>
                     <p className="text-xs text-muted-foreground mt-1">2 hours ago</p>
                   </div>
                 </div>
@@ -85,8 +85,8 @@ export function Navbar() {
                 </div>
                 <div className="border-t pt-2">
                   <div className="text-sm">
-                    <p className="font-medium">Meeting reminder</p>
-                    <p className="text-muted-foreground">Team meeting at 3:00 PM</p>
+                    <p className="font-medium">New transaction</p>
+                    <p className="text-muted-foreground">Global Trading Inc. created a new order</p>
                     <p className="text-xs text-muted-foreground mt-1">Tomorrow</p>
                   </div>
                 </div>
