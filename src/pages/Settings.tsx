@@ -6,14 +6,40 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 const SettingsPage = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+
+  // Check for dark mode preference on initial load
+  useEffect(() => {
+    // Check if document has dark class or local storage setting
+    const isDarkMode = document.documentElement.classList.contains('dark') || 
+                      localStorage.getItem('theme') === 'dark';
+    setDarkMode(isDarkMode);
+  }, []);
+
+  const toggleDarkMode = (enabled: boolean) => {
+    setDarkMode(enabled);
+    if (enabled) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
 
   const handleSave = (section: string) => {
     setIsLoading(true);
+    
+    // If General settings, apply dark mode
+    if (section === 'General') {
+      toggleDarkMode(darkMode);
+    }
+    
     // Simulate API call
     setTimeout(() => {
       setIsLoading(false);
@@ -41,10 +67,6 @@ const SettingsPage = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="company-name">Company Name</Label>
-                <Input id="company-name" defaultValue="ClientChronicle Inc." />
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="timezone">Timezone</Label>
                 <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
                   <option>UTC</option>
@@ -63,7 +85,11 @@ const SettingsPage = () => {
                 </select>
               </div>
               <div className="flex items-center space-x-2">
-                <Switch id="dark-mode" defaultChecked />
+                <Switch 
+                  id="dark-mode" 
+                  checked={darkMode}
+                  onCheckedChange={setDarkMode}
+                />
                 <Label htmlFor="dark-mode">Enable Dark Mode</Label>
               </div>
             </CardContent>

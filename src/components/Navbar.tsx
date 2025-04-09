@@ -12,7 +12,7 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Popover,
   PopoverContent,
@@ -22,7 +22,69 @@ import {
 export function Navbar() {
   const { toggleSidebar } = useSidebar();
   const navigate = useNavigate();
-  const [notificationCount, setNotificationCount] = useState(3);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+  
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      
+      // Get recent sales
+      const { data: recentSales, error: salesError } = await supabase
+        .from('sales')
+        .select(`
+          transno, 
+          salesdate,
+          customer:custno (custname)
+        `)
+        .order('salesdate', { ascending: false })
+        .limit(1);
+        
+      if (salesError) throw salesError;
+      
+      // Get recent payments
+      const { data: recentPayments, error: paymentsError } = await supabase
+        .from('payment')
+        .select('orno, paydate, amount, transno')
+        .order('paydate', { ascending: false })
+        .limit(2);
+        
+      if (paymentsError) throw paymentsError;
+      
+      // Combine and format notifications
+      const notificationItems = [
+        ...recentSales.map((sale: any) => ({
+          id: `sale-${sale.transno}`,
+          title: 'New sale created',
+          description: `Sale #${sale.transno} with ${sale.customer?.custname || 'customer'}`,
+          time: sale.salesdate ? new Date(sale.salesdate).toLocaleDateString() : 'recent',
+          type: 'sale'
+        })),
+        ...recentPayments.map((payment: any) => ({
+          id: `payment-${payment.orno}`,
+          title: 'Payment received',
+          description: `${payment.amount ? new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD'
+          }).format(payment.amount) : 'Payment'} for transaction #${payment.transno || ''}`,
+          time: payment.paydate ? new Date(payment.paydate).toLocaleDateString() : 'recent',
+          type: 'payment'
+        }))
+      ];
+      
+      setNotifications(notificationItems);
+      setNotificationCount(notificationItems.length);
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      setLoading(false);
+    }
+  };
   
   const handleSignOut = async () => {
     try {
@@ -37,6 +99,7 @@ export function Navbar() {
   };
 
   const handleNotificationClick = () => {
+    // Mark notifications as viewed
     toast.info("Notifications viewed");
     setNotificationCount(0);
   };
@@ -69,27 +132,22 @@ export function Navbar() {
             <PopoverContent className="w-80">
               <div className="space-y-2">
                 <h4 className="font-medium">Notifications</h4>
-                <div className="border-t pt-2">
-                  <div className="text-sm">
-                    <p className="font-medium">New message from client</p>
-                    <p className="text-muted-foreground">ABC Company sent you a message</p>
-                    <p className="text-xs text-muted-foreground mt-1">2 hours ago</p>
-                  </div>
-                </div>
-                <div className="border-t pt-2">
-                  <div className="text-sm">
-                    <p className="font-medium">Payment received</p>
-                    <p className="text-muted-foreground">$250.00 from ABC Company</p>
-                    <p className="text-xs text-muted-foreground mt-1">Yesterday</p>
-                  </div>
-                </div>
-                <div className="border-t pt-2">
-                  <div className="text-sm">
-                    <p className="font-medium">New transaction</p>
-                    <p className="text-muted-foreground">Global Trading Inc. created a new order</p>
-                    <p className="text-xs text-muted-foreground mt-1">Tomorrow</p>
-                  </div>
-                </div>
+                
+                {loading ? (
+                  <div className="py-4 text-center text-sm text-muted-foreground">Loading notifications...</div>
+                ) : notifications.length === 0 ? (
+                  <div className="py-4 text-center text-sm text-muted-foreground">No notifications</div>
+                ) : (
+                  notifications.map(notification => (
+                    <div key={notification.id} className="border-t pt-2">
+                      <div className="text-sm">
+                        <p className="font-medium">{notification.title}</p>
+                        <p className="text-muted-foreground">{notification.description}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{notification.time}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </PopoverContent>
           </Popover>

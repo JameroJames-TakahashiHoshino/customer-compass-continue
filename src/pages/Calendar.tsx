@@ -8,13 +8,15 @@ import { useState, useEffect } from "react";
 import { format, isValid, parse } from "date-fns";
 import { CalendarRange, CalendarSearch } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
-// Mock event data structure
+// Define event data structure
 interface CalendarEvent {
   id: string;
   title: string;
   date: Date;
   description: string;
+  type: "event" | "activity";
 }
 
 const CalendarPage = () => {
@@ -24,37 +26,63 @@ const CalendarPage = () => {
   const [dayInput, setDayInput] = useState<string>(format(new Date(), "dd"));
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [currentEvents, setCurrentEvents] = useState<CalendarEvent[]>([]);
+  const [loading, setLoading] = useState(false);
   
-  // Mock events data - in a real app this would come from a database
+  // Fetch events data from sales and activities
   useEffect(() => {
-    const mockEvents: CalendarEvent[] = [
-      {
-        id: "1",
-        title: "Client Meeting",
-        date: new Date(2025, 3, 10), // April 10, 2025
-        description: "Discuss project requirements with new client"
-      },
-      {
-        id: "2",
-        title: "Follow-up Call",
-        date: new Date(2025, 3, 12), // April 12, 2025
-        description: "Call with marketing team about campaign updates"
-      },
-      {
-        id: "3", 
-        title: "Product Demo",
-        date: new Date(2025, 3, 15), // April 15, 2025
-        description: "Show new features to potential clients"
-      },
-      {
-        id: "4",
-        title: "Team Meeting",
-        date: new Date(), // Today
-        description: "Weekly team sync meeting"
+    const fetchEvents = async () => {
+      setLoading(true);
+      try {
+        // Fetch sales data
+        const { data: salesData, error: salesError } = await supabase
+          .from('sales')
+          .select('transno, salesdate, custno, customer:custno (custname)');
+        
+        if (salesError) throw salesError;
+        
+        // Process sales into events
+        const salesEvents: CalendarEvent[] = salesData.map((sale: any) => ({
+          id: `sale-${sale.transno}`,
+          title: `Sale #${sale.transno}`,
+          date: new Date(sale.salesdate),
+          description: `Transaction with ${sale.customer?.custname || 'Customer #' + sale.custno}`,
+          type: "event"
+        }));
+        
+        // Fetch payment data for activities
+        const { data: paymentData, error: paymentError } = await supabase
+          .from('payment')
+          .select('orno, paydate, transno, amount');
+          
+        if (paymentError) throw paymentError;
+        
+        // Process payments into activities
+        const paymentEvents: CalendarEvent[] = paymentData.map((payment: any) => ({
+          id: `payment-${payment.orno}`,
+          title: `Payment #${payment.orno}`,
+          date: new Date(payment.paydate),
+          description: `Payment of ${payment.amount ? new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD'
+          }).format(payment.amount) : 'N/A'} for sale #${payment.transno || 'N/A'}`,
+          type: "activity"
+        }));
+        
+        // Combine all events and sort by date
+        const allEvents = [...salesEvents, ...paymentEvents]
+          .filter(event => isValid(event.date))
+          .sort((a, b) => a.date.getTime() - b.date.getTime());
+          
+        setEvents(allEvents);
+      } catch (error) {
+        console.error("Error fetching calendar data:", error);
+        toast.error("Failed to load calendar events");
+      } finally {
+        setLoading(false);
       }
-    ];
+    };
     
-    setEvents(mockEvents);
+    fetchEvents();
   }, []);
   
   // Update current events whenever date changes
@@ -118,16 +146,6 @@ const CalendarPage = () => {
       // Valid date - update the state
       setDate(newDate);
       
-      // Also update the calendar view to match the selected date
-      setTimeout(() => {
-        // Force calendar to update to the new month/year
-        const calendarElement = document.querySelector('.rdp-month');
-        if (calendarElement) {
-          calendarElement.setAttribute('data-year', year.toString());
-          calendarElement.setAttribute('data-month', month.toString());
-        }
-      }, 50);
-      
       toast.success(`Navigated to ${format(newDate, "MMMM d, yyyy")}`);
     } catch (error) {
       console.error("Error setting date:", error);
@@ -190,7 +208,7 @@ const CalendarPage = () => {
         <Card className="col-span-1">
           <CardHeader>
             <CardTitle>Select Date</CardTitle>
-            <CardDescription>Choose a date to view or add events</CardDescription>
+            <CardDescription>Choose a date to view events and activities</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4 mb-4">
@@ -260,13 +278,15 @@ const CalendarPage = () => {
             <CardTitle>
               {date ? format(date, "EEEE, MMMM d, yyyy") : 'No Date Selected'}
             </CardTitle>
-            <CardDescription>Events for this date</CardDescription>
+            <CardDescription>Events and activities for this date</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
-                  {currentEvents.length === 0 ? "No events scheduled for this date." : `${currentEvents.length} event(s) scheduled`}
+                  {loading ? "Loading events..." : 
+                   currentEvents.length === 0 ? "No events or activities scheduled for this date." : 
+                   `${currentEvents.length} item(s) scheduled`}
                 </p>
                 <Button variant="outline" size="sm">
                   <CalendarRange className="mr-2 h-4 w-4" />
@@ -277,15 +297,18 @@ const CalendarPage = () => {
               {currentEvents.length > 0 && (
                 <div className="space-y-3 mt-4">
                   {currentEvents.map((event) => (
-                    <Card key={event.id} className="p-4 shadow-sm">
+                    <Card key={event.id} className={`p-4 shadow-sm ${event.type === "event" ? "border-primary" : "border-secondary"}`}>
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="font-medium">{event.title}</h3>
+                          <div className="flex items-center">
+                            <span className={`inline-block w-2 h-2 rounded-full mr-2 ${event.type === "event" ? "bg-primary" : "bg-secondary"}`}></span>
+                            <h3 className="font-medium">{event.title}</h3>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">Type: {event.type === "event" ? "Sale" : "Payment"}</p>
                           <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
                         </div>
                         <div className="flex space-x-2">
-                          <Button size="sm" variant="ghost">Edit</Button>
-                          <Button size="sm" variant="ghost" className="text-destructive">Delete</Button>
+                          <Button size="sm" variant="ghost">Details</Button>
                         </div>
                       </div>
                     </Card>

@@ -20,8 +20,30 @@ import Messages from "@/pages/Messages";
 import Analytics from "@/pages/Analytics";
 import Settings from "@/pages/Settings";
 
-// Create a new component for SalesDetail
+// Import SalesDetail
 import SalesDetail from "@/pages/SalesDetail";
+
+// Check for dark mode
+const setInitialTheme = () => {
+  // Check if theme is already set in localStorage
+  const storedTheme = localStorage.getItem('theme');
+  
+  if (storedTheme === 'dark') {
+    document.documentElement.classList.add('dark');
+  } else if (storedTheme === 'light') {
+    document.documentElement.classList.remove('dark');
+  } else {
+    // If no preference set, check user's system preference
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (prefersDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }
+};
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
@@ -93,6 +115,11 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 function App() {
+  // Initialize theme on app load
+  useEffect(() => {
+    setInitialTheme();
+  }, []);
+
   return (
     <Router>
       <div className="w-full">
