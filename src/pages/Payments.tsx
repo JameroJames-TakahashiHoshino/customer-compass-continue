@@ -203,12 +203,16 @@ const Payments = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {payments.length === 0 ? (
+                    {payments.length === 0 && noResults ? (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                          {noResults 
-                            ? `No results found for "${debouncedSearchTerm}"`
-                            : "No payment records available"}
+                          No results found for "{debouncedSearchTerm}"
+                        </TableCell>
+                      </TableRow>
+                    ) : payments.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                          No payment records available
                         </TableCell>
                       </TableRow>
                     ) : (

@@ -14,7 +14,7 @@ export default function IndexPage() {
           <p className="text-lg text-muted-foreground mt-2">Manage your customers and transactions</p>
         </div>
         
-        <AuthForm showForgotPassword={false} />
+        <AuthForm />
         
         <div className="text-center">
           <p className="text-sm text-muted-foreground mb-2">Are you an administrator?</p>

@@ -36,10 +36,6 @@ interface SalesType {
   customer?: {
     custname: string | null;
   };
-  employee?: {
-    firstname: string | null;
-    lastname: string | null;
-  };
 }
 
 const Sales = () => {
@@ -99,14 +95,13 @@ const Sales = () => {
         .from('sales')
         .select(`
           *,
-          customer:custno (custname),
-          employee:empno (firstname, lastname)
+          customer:custno (custname)
         `, { count: 'exact' });
 
       // Apply search filter if searchTerm exists
       if (debouncedSearchTerm.trim()) {
         query = query
-          .or(`transno.ilike.%${debouncedSearchTerm.trim()}%,custno.ilike.%${debouncedSearchTerm.trim()}%,empno.ilike.%${debouncedSearchTerm.trim()}%`);
+          .or(`transno.ilike.%${debouncedSearchTerm.trim()}%,custno.ilike.%${debouncedSearchTerm.trim()}%`);
       }
 
       // Get paginated results
@@ -175,13 +170,6 @@ const Sales = () => {
     return sale.custno || "-";
   };
 
-  const getEmployeeName = (sale: SalesType) => {
-    if (sale.employee && (sale.employee.firstname || sale.employee.lastname)) {
-      return `${sale.employee.firstname || ""} ${sale.employee.lastname || ""}`.trim();
-    }
-    return sale.empno || "-";
-  };
-
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between">
@@ -223,17 +211,20 @@ const Sales = () => {
                       <TableHead>Transaction No</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Customer</TableHead>
-                      <TableHead>Employee</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sales.length === 0 ? (
+                    {sales.length === 0 && noResults ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                          {noResults 
-                            ? `No results found for "${debouncedSearchTerm}"`
-                            : "No sales records available"}
+                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                          No results found for "{debouncedSearchTerm}"
+                        </TableCell>
+                      </TableRow>
+                    ) : sales.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                          No sales records available
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -253,7 +244,6 @@ const Sales = () => {
                               "-"
                             )}
                           </TableCell>
-                          <TableCell>{getEmployeeName(sale)}</TableCell>
                           <TableCell>
                             <Button 
                               variant="ghost" 
