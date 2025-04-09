@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,15 +32,9 @@ const setInitialTheme = () => {
   } else if (storedTheme === 'light') {
     document.documentElement.classList.remove('dark');
   } else {
-    // If no preference set, check user's system preference
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (prefersDark) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
+    // Default to light mode
+    document.documentElement.classList.remove('dark');
+    localStorage.setItem('theme', 'light');
   }
 };
 
