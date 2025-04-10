@@ -51,7 +51,7 @@ const MessagesPage = () => {
         
         // Prepare mock conversations using real customer data
         if (data && data.length > 0) {
-          const customerConversations = data.map((customer, idx) => ({
+          const customerConversations: Conversation[] = data.map((customer, idx) => ({
             customer: customer.custname || `Customer ${customer.custno}`,
             custno: customer.custno,
             lastMessage: idx % 2 === 0 

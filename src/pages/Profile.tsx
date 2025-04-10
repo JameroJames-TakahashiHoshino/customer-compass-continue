@@ -109,7 +109,6 @@ const Profile = () => {
     
     setUpdating(true);
     try {
-      // For demo purposes, simulate a successful update
       let newAvatarUrl = avatarUrl;
       
       if (avatarFile) {
@@ -119,19 +118,22 @@ const Profile = () => {
         }
       }
 
-      // In a real app with Supabase Auth, you would use:
-      // const { error } = await supabase.auth.updateUser({
-      //   data: { name, avatar_url: newAvatarUrl }
-      // });
+      // Update user metadata
+      const { error } = await supabase.auth.updateUser({
+        data: { 
+          name: name,
+          avatar_url: newAvatarUrl
+        }
+      });
 
-      // Simulate successful update for demo
-      setTimeout(() => {
-        setAvatarFile(null);
-        toast.success("Profile updated successfully");
-        setUpdating(false);
-      }, 1500);
+      if (error) throw error;
+      
+      // Update the displayed data
+      setAvatarFile(null);
+      toast.success("Profile updated successfully");
     } catch (error: any) {
       toast.error(error.message || "Failed to update profile");
+    } finally {
       setUpdating(false);
     }
   };

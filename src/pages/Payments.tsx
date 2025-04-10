@@ -119,41 +119,45 @@ const Payments = () => {
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-          ) : payments.length > 0 ? (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>OR #</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Transaction #</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {payments.map((payment) => (
-                    <TableRow key={payment.orno}>
-                      <TableCell className="font-medium">{payment.orno}</TableCell>
-                      <TableCell>
-                        {new Date(payment.paydate).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>{payment.transno}</TableCell>
-                      <TableCell>
-                        {payment.sales?.customer?.custname || 'N/A'}
-                      </TableCell>
-                      <TableCell>
-                        {formatCurrency(payment.amount)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              No results found
-            </div>
+            <>
+              {payments.length > 0 ? (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>OR #</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Transaction #</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {payments.map((payment) => (
+                        <TableRow key={payment.orno}>
+                          <TableCell className="font-medium">{payment.orno}</TableCell>
+                          <TableCell>
+                            {new Date(payment.paydate).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>{payment.transno}</TableCell>
+                          <TableCell>
+                            {payment.sales?.customer?.custname || 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {formatCurrency(payment.amount)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No results found
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

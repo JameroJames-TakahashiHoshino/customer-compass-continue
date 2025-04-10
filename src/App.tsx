@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,8 +19,6 @@ import Calendar from "@/pages/Calendar";
 import Messages from "@/pages/Messages";
 import Analytics from "@/pages/Analytics";
 import Settings from "@/pages/Settings";
-
-// Import SalesDetail
 import SalesDetail from "@/pages/SalesDetail";
 
 // Check for dark mode

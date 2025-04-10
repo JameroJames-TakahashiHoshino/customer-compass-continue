@@ -52,7 +52,7 @@ const AddCustomer = () => {
       // Insert new customer
       const { error } = await supabase
         .from('customer')
-        .insert(formData);
+        .insert([formData]);
 
       if (error) throw error;
 

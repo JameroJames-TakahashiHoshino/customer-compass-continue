@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,11 +13,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 const Settings = () => {
   const [loading, setLoading] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [dateFormat, setDateFormat] = useState("MM/DD/YYYY");
+  const [timeFormat, setTimeFormat] = useState("12h");
 
   // Load the current theme
   useEffect(() => {
     const theme = localStorage.getItem('theme');
     setDarkMode(theme === 'dark');
+    
+    // Set default theme if not set
+    if (!theme) {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
   }, []);
 
   const handleThemeChange = (checked: boolean) => {
@@ -28,6 +38,8 @@ const Settings = () => {
       document.documentElement.classList.remove('dark');
       localStorage.setItem('theme', 'light');
     }
+    
+    toast.success(`${checked ? 'Dark' : 'Light'} mode enabled`);
   };
 
   const handleSaveGeneralSettings = () => {
@@ -51,6 +63,16 @@ const Settings = () => {
       toast.success("Notification preferences saved");
     }, 800);
   };
+  
+  const handleSaveDisplaySettings = () => {
+    setLoading(true);
+    
+    // Simulate saving
+    setTimeout(() => {
+      setLoading(false);
+      toast.success("Display settings saved successfully");
+    }, 800);
+  };
 
   return (
     <div className="container mx-auto p-6">
@@ -59,6 +81,7 @@ const Settings = () => {
       <Tabs defaultValue="general" className="w-full">
         <TabsList className="mb-6">
           <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="display">Display</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
         </TabsList>
@@ -91,6 +114,77 @@ const Settings = () => {
               >
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Save Changes
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="display">
+          <Card>
+            <CardHeader>
+              <CardTitle>Display Settings</CardTitle>
+              <CardDescription>Customize how dates and times are displayed</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="date-format">Date Format</Label>
+                <Select value={dateFormat} onValueChange={setDateFormat}>
+                  <SelectTrigger id="date-format" className="dark:text-foreground">
+                    <SelectValue placeholder="Select date format" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
+                    <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
+                    <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
+                    <SelectItem value="MMMM D, YYYY">MMMM D, YYYY</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Choose how dates appear throughout the application
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="time-format">Time Format</Label>
+                <Select value={timeFormat} onValueChange={setTimeFormat}>
+                  <SelectTrigger id="time-format" className="dark:text-foreground">
+                    <SelectValue placeholder="Select time format" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="12h">12-hour (e.g., 2:30 PM)</SelectItem>
+                    <SelectItem value="24h">24-hour (e.g., 14:30)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Choose how times appear throughout the application
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="currency-symbol">Currency Symbol</Label>
+                <Select defaultValue="USD">
+                  <SelectTrigger id="currency-symbol" className="dark:text-foreground">
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USD">$ (USD)</SelectItem>
+                    <SelectItem value="EUR">€ (EUR)</SelectItem>
+                    <SelectItem value="GBP">£ (GBP)</SelectItem>
+                    <SelectItem value="JPY">¥ (JPY)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Choose the default currency for the application
+                </p>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button 
+                onClick={handleSaveDisplaySettings} 
+                disabled={loading}
+              >
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Display Settings
               </Button>
             </CardFooter>
           </Card>
