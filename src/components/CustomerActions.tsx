@@ -68,6 +68,14 @@ const CustomerActions = ({ customerNo, onEdit, onDeleted }: CustomerActionsProps
     }
   };
 
+  // Force close dropdown when dialog is closed
+  const handleDialogOpenChange = (open: boolean) => {
+    setDeleteDialogOpen(open);
+    if (!open) {
+      setDropdownOpen(false);
+    }
+  };
+
   return (
     <>
       <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
@@ -98,7 +106,7 @@ const CustomerActions = ({ customerNo, onEdit, onDeleted }: CustomerActionsProps
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <Dialog open={deleteDialogOpen} onOpenChange={handleDialogOpenChange}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Customer</DialogTitle>
