@@ -1,212 +1,416 @@
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { MessageSquare, Send, User } from "lucide-react";
-import { useState, useEffect } from "react";
-import { useDebounce } from "@/hooks/use-debounce";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2, Send, MessageSquare, User, PlusCircle } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { 
+  Dialog,
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const customers = [
-  "ABC Company", 
-  "XYZ Corporation", 
-  "Global Trading Inc.", 
-  "City Merchants", 
-  "Mountain Supplies LLC"
-];
-
-type MessageType = {
-  id: number;
+interface Message {
+  id: string;
   content: string;
-  timestamp: string;
-  from: "customer" | "me";
-};
+  created_at: string;
+  sender_id: string;
+  sender_name: string;
+}
 
-type Conversation = {
-  customer: string;
-  lastMessage: string;
-  lastActive: string;
-  messages: MessageType[];
-};
+interface Conversation {
+  id: string;
+  customer_id: string;
+  customer_name: string;
+  last_message: string;
+  updated_at: string;
+}
 
-const initialConversations: Conversation[] = customers.map((customer, idx) => ({
-  customer,
-  lastMessage: idx % 2 === 0 
-    ? "Hello, how are you doing today?" 
-    : "Thanks for your message. Let me check that for you.",
-  lastActive: idx === 0 ? "Just now" : `${idx}d ago`,
-  messages: idx === 0 ? [
-    {
-      id: 1,
-      content: "Hello, I wanted to ask about my recent order. When can I expect it to be delivered?",
-      timestamp: "10:32 AM",
-      from: "customer"
-    },
-    {
-      id: 2,
-      content: "Hi, thanks for reaching out. Your order #12345 is scheduled for delivery tomorrow between 9am and 12pm.",
-      timestamp: "10:34 AM",
-      from: "me"
-    },
-    {
-      id: 3,
-      content: "Perfect, thank you for the quick response!",
-      timestamp: "10:36 AM",
-      from: "customer"
-    }
-  ] : []
-}));
-
-const MessagesPage = () => {
-  const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
-  const [activeCustomer, setActiveCustomer] = useState<string>(customers[0]);
+const Messages = () => {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConversation, setCurrentConversation] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
-  
-  const filteredConversations = conversations.filter(conv => 
-    conv.customer.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) || 
-    conv.lastMessage.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-  );
-  
-  const activeConversation = conversations.find(conv => conv.customer === activeCustomer) || conversations[0];
-  
-  const handleSendMessage = () => {
-    if (!newMessage.trim()) return;
+  const [loading, setLoading] = useState(true);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [customers, setCustomers] = useState<{custno: string, custname: string}[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<string>("");
+  const [newConversationDialogOpen, setNewConversationDialogOpen] = useState(false);
+  const [creatingConversation, setCreatingConversation] = useState(false);
+
+  // Fetch conversations on component mount
+  useEffect(() => {
+    const fetchConversations = async () => {
+      setLoading(true);
+      try {
+        // This is a mock implementation - in real app, you'd fetch from the database
+        const mockConversations: Conversation[] = [
+          {
+            id: "1",
+            customer_id: "C001",
+            customer_name: "Acme Corp",
+            last_message: "Thank you for your order",
+            updated_at: new Date().toISOString()
+          },
+          {
+            id: "2",
+            customer_id: "C002",
+            customer_name: "TechSolutions Inc",
+            last_message: "When can we expect delivery?",
+            updated_at: new Date(Date.now() - 86400000).toISOString() // 1 day ago
+          }
+        ];
+        
+        setConversations(mockConversations);
+        
+        // Fetch customers for new conversation dialog
+        const { data, error } = await supabase
+          .from('customer')
+          .select('custno, custname');
+        
+        if (error) throw error;
+        setCustomers(data || []);
+      } catch (error) {
+        console.error("Error fetching conversations:", error);
+        toast.error("Failed to load conversations");
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    const newMessages = [...activeConversation.messages];
-    newMessages.push({
-      id: Date.now(),
-      content: newMessage,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      from: "me"
-    });
-    
-    const updatedConversations = conversations.map(conv => 
-      conv.customer === activeCustomer 
-        ? { 
-            ...conv, 
-            messages: newMessages,
-            lastMessage: newMessage,
-            lastActive: "Just now" 
-          } 
-        : conv
-    );
-    
-    setConversations(updatedConversations);
-    setNewMessage("");
-  };
+    fetchConversations();
+  }, []);
   
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
+  // Fetch messages when a conversation is selected
+  useEffect(() => {
+    if (currentConversation) {
+      fetchMessages(currentConversation);
+    } else {
+      setMessages([]);
+    }
+  }, [currentConversation]);
+  
+  const fetchMessages = async (conversationId: string) => {
+    setLoading(true);
+    try {
+      // This is a mock implementation - in real app, you'd fetch from the database
+      const mockMessages: Message[] = [
+        {
+          id: "101",
+          content: "Hello, I wanted to discuss our recent order",
+          created_at: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+          sender_id: "customer",
+          sender_name: conversationId === "1" ? "Acme Corp" : "TechSolutions Inc"
+        },
+        {
+          id: "102",
+          content: "Hi there! What can I help you with?",
+          created_at: new Date(Date.now() - 3540000).toISOString(), // 59 min ago
+          sender_id: "staff",
+          sender_name: "Support Team"
+        },
+        {
+          id: "103",
+          content: conversationId === "1" 
+            ? "Thank you for your order" 
+            : "When can we expect delivery?",
+          created_at: new Date(Date.now() - 1800000).toISOString(), // 30 min ago
+          sender_id: conversationId === "1" ? "staff" : "customer",
+          sender_name: conversationId === "1" ? "Support Team" : (conversationId === "2" ? "TechSolutions Inc" : "")
+        }
+      ];
+      
+      setMessages(mockMessages);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      toast.error("Failed to load messages");
+    } finally {
+      setLoading(false);
     }
   };
-
-  // Handle search term changes
-  useEffect(() => {
-    // No need for additional logic here as the filtering is done in the render
-  }, [debouncedSearchTerm]);
+  
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !currentConversation) return;
+    
+    setSendingMessage(true);
+    try {
+      // In a real app, you'd save to the database here
+      const newMsg: Message = {
+        id: Date.now().toString(),
+        content: newMessage,
+        created_at: new Date().toISOString(),
+        sender_id: "staff",
+        sender_name: "Support Team"
+      };
+      
+      setMessages(prev => [...prev, newMsg]);
+      
+      // Update the last message in conversations list
+      setConversations(prev => 
+        prev.map(conv => 
+          conv.id === currentConversation 
+            ? {...conv, last_message: newMessage, updated_at: new Date().toISOString()} 
+            : conv
+        )
+      );
+      
+      setNewMessage("");
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast.error("Failed to send message");
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+  
+  const handleCreateConversation = async () => {
+    if (!selectedCustomer) {
+      toast.error("Please select a customer");
+      return;
+    }
+    
+    setCreatingConversation(true);
+    try {
+      // Find the selected customer name
+      const customer = customers.find(c => c.custno === selectedCustomer);
+      
+      if (!customer) {
+        throw new Error("Selected customer not found");
+      }
+      
+      // In a real app, you'd create a conversation in the database here
+      const newConversation: Conversation = {
+        id: Date.now().toString(),
+        customer_id: selectedCustomer,
+        customer_name: customer.custname || selectedCustomer,
+        last_message: "New conversation started",
+        updated_at: new Date().toISOString()
+      };
+      
+      setConversations(prev => [newConversation, ...prev]);
+      setCurrentConversation(newConversation.id);
+      setNewConversationDialogOpen(false);
+      
+      toast.success(`Started conversation with ${customer.custname}`);
+    } catch (error: any) {
+      console.error("Error creating conversation:", error);
+      toast.error(error.message || "Failed to create conversation");
+    } finally {
+      setCreatingConversation(false);
+    }
+  };
+  
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString();
+  };
 
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">Messages</h1>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
-        <Card className="col-span-1 flex flex-col">
-          <CardHeader>
-            <CardTitle>Conversations</CardTitle>
-            <CardDescription>Your recent message threads</CardDescription>
-            <div className="mt-2">
-              <Input 
-                placeholder="Search conversations..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </CardHeader>
-          <CardContent className="flex-1 overflow-auto">
-            <div className="space-y-2">
-              {filteredConversations.length === 0 ? (
-                <div className="text-center py-4 text-muted-foreground">
-                  No conversations found
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-12rem)]">
+        {/* Left sidebar - Conversations */}
+        <div className="col-span-1 border rounded-lg flex flex-col">
+          <div className="p-4 border-b flex justify-between items-center">
+            <h2 className="font-semibold text-lg">Conversations</h2>
+            <Dialog open={newConversationDialogOpen} onOpenChange={setNewConversationDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="h-8">
+                  <PlusCircle className="h-4 w-4 mr-1" />
+                  New
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>New Conversation</DialogTitle>
+                  <DialogDescription>
+                    Select a customer to start a conversation with.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                  <Label htmlFor="customer">Customer</Label>
+                  <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a customer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {customers.map(customer => (
+                        <SelectItem key={customer.custno} value={customer.custno}>
+                          {customer.custname || customer.custno}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              ) : (
-                filteredConversations.map((conv, idx) => (
-                  <div 
-                    key={idx} 
-                    className={`flex items-center p-3 rounded-md cursor-pointer ${conv.customer === activeCustomer ? 'bg-accent' : 'hover:bg-muted'}`}
-                    onClick={() => setActiveCustomer(conv.customer)}
+                <DialogFooter>
+                  <Button 
+                    onClick={handleCreateConversation} 
+                    disabled={creatingConversation || !selectedCustomer}
                   >
-                    <div className="flex-shrink-0 mr-3 bg-primary text-primary-foreground rounded-full p-2">
-                      <User className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium">{conv.customer}</p>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {conv.lastMessage}
-                      </p>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {conv.lastActive}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="col-span-1 lg:col-span-2 flex flex-col">
-          <CardHeader className="border-b">
-            <CardTitle>{activeCustomer}</CardTitle>
-            <CardDescription>Last active: {activeConversation.lastActive}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex-1 overflow-auto p-4 space-y-4">
-            {activeConversation.messages.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
-                No messages yet. Start the conversation!
+                    {creatingConversation && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Start Conversation
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-2">
+            {loading && conversations.length === 0 ? (
+              <div className="flex justify-center p-6">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : conversations.length === 0 ? (
+              <div className="text-center p-6 text-muted-foreground">
+                <MessageSquare className="h-10 w-10 mx-auto mb-2 opacity-20" />
+                <p>No conversations found</p>
+                <Button 
+                  variant="link" 
+                  className="mt-2"
+                  onClick={() => setNewConversationDialogOpen(true)}
+                >
+                  Start a new conversation
+                </Button>
               </div>
             ) : (
-              activeConversation.messages.map(message => (
-                <div key={message.id} className={`flex items-start ${message.from === "me" ? "justify-end" : "mb-4"}`}>
-                  {message.from === "customer" && (
-                    <div className="flex-shrink-0 mr-3 bg-muted rounded-full p-2">
-                      <User className="h-4 w-4" />
+              conversations.map(conversation => (
+                <div 
+                  key={conversation.id}
+                  className={`p-3 cursor-pointer rounded-md hover:bg-accent mb-1 ${currentConversation === conversation.id ? 'bg-accent/80' : ''}`}
+                  onClick={() => setCurrentConversation(conversation.id)}
+                >
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>{conversation.customer_name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{conversation.customer_name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{conversation.last_message}</p>
                     </div>
-                  )}
-                  <div className={`${message.from === "me" ? "bg-primary text-primary-foreground" : "bg-muted"} rounded-lg p-3 max-w-[80%]`}>
-                    <p className="text-sm">{message.content}</p>
-                    <span className={`text-xs ${message.from === "me" ? "text-primary-foreground/70" : "text-muted-foreground"} mt-1 block`}>{message.timestamp}</span>
+                    <div className="text-xs text-muted-foreground whitespace-nowrap">
+                      {new Date(conversation.updated_at).toLocaleDateString()}
+                    </div>
                   </div>
-                  {message.from === "me" && (
-                    <div className="flex-shrink-0 ml-3 bg-primary text-primary-foreground rounded-full p-2">
-                      <MessageSquare className="h-4 w-4" />
-                    </div>
-                  )}
                 </div>
               ))
             )}
-          </CardContent>
-          <div className="p-4 border-t">
-            <div className="flex items-center space-x-2">
-              <Textarea 
-                placeholder="Type your message..." 
-                className="min-h-10" 
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyDown={handleKeyPress}
-              />
-              <Button size="icon" className="rounded-full" onClick={handleSendMessage}>
-                <Send className="h-4 w-4" />
+          </div>
+        </div>
+        
+        {/* Right side - Messages */}
+        <div className="col-span-1 lg:col-span-2 border rounded-lg flex flex-col">
+          {currentConversation ? (
+            <>
+              {/* Message header */}
+              <div className="p-4 border-b">
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback>
+                      {conversations.find(c => c.id === currentConversation)?.customer_name.charAt(0) || '?'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h2 className="font-semibold">
+                      {conversations.find(c => c.id === currentConversation)?.customer_name || 'Customer'}
+                    </h2>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Message content */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {loading ? (
+                  <div className="flex justify-center p-6">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
+                ) : messages.length === 0 ? (
+                  <div className="text-center p-6 text-muted-foreground">
+                    <MessageSquare className="h-10 w-10 mx-auto mb-2 opacity-20" />
+                    <p>No messages yet</p>
+                    <p className="text-sm">Start the conversation by sending a message</p>
+                  </div>
+                ) : (
+                  messages.map(message => (
+                    <div 
+                      key={message.id} 
+                      className={`flex ${message.sender_id === 'staff' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div 
+                        className={`max-w-[80%] rounded-lg p-3 ${
+                          message.sender_id === 'staff' 
+                            ? 'bg-primary text-primary-foreground' 
+                            : 'bg-accent'
+                        }`}
+                      >
+                        <div className="flex items-start gap-2">
+                          {message.sender_id !== 'staff' && (
+                            <Avatar className="h-6 w-6">
+                              <AvatarFallback>{message.sender_name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                          )}
+                          <div>
+                            <p>{message.content}</p>
+                            <p className="text-xs mt-1 opacity-70">{formatDate(message.created_at)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              
+              {/* Message input */}
+              <div className="p-4 border-t">
+                <div className="flex gap-2">
+                  <Input
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Type your message..."
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                  />
+                  <Button onClick={handleSendMessage} disabled={sendingMessage || !newMessage.trim()}>
+                    {sendingMessage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-center p-6 text-muted-foreground">
+              <MessageSquare className="h-16 w-16 mb-4 opacity-20" />
+              <h3 className="text-xl font-medium mb-2">No conversation selected</h3>
+              <p className="mb-4">Select a conversation from the list or start a new one</p>
+              <Button 
+                onClick={() => setNewConversationDialogOpen(true)}
+                className="mt-2"
+              >
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Start New Conversation
               </Button>
             </div>
-          </div>
-        </Card>
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
-export default MessagesPage;
+// Component for the Label
+const Label = ({ children, htmlFor }: { children: React.ReactNode; htmlFor?: string }) => (
+  <label
+    htmlFor={htmlFor}
+    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-2 block"
+  >
+    {children}
+  </label>
+);
+
+export default Messages;

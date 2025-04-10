@@ -93,6 +93,18 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Ensure text is visible in dark mode inputs and selects */
+  .dark input,
+  .dark select,
+  .dark textarea {
+    @apply text-foreground bg-input;
+  }
+  
+  /* Fix for dark mode select options */
+  .dark select option {
+    @apply bg-popover text-popover-foreground;
+  }
 }
 
 .auth-background {

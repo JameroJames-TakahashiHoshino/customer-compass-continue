@@ -6,18 +6,27 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 const SettingsPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  
+  // Settings state
+  const [settings, setSettings] = useState({
+    timezone: "UTC",
+    dateFormat: "MM/DD/YYYY",
+    dataRetention: "30 days"
+  });
 
   // Check for dark mode preference on initial load
   useEffect(() => {
     // Check if document has dark class or local storage setting
     const isDarkMode = document.documentElement.classList.contains('dark') || 
-                      localStorage.getItem('theme') === 'dark';
+                        localStorage.getItem('theme') === 'dark';
     setDarkMode(isDarkMode);
   }, []);
 
@@ -46,6 +55,10 @@ const SettingsPage = () => {
       toast.success(`${section} settings saved successfully`);
     }, 1000);
   };
+  
+  const handleSettingChange = (key: keyof typeof settings, value: string) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
+  };
 
   return (
     <div className="container mx-auto p-6">
@@ -68,21 +81,37 @@ const SettingsPage = () => {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="timezone">Timezone</Label>
-                <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                  <option>UTC</option>
-                  <option>Eastern Time (EST/EDT)</option>
-                  <option>Central Time (CST/CDT)</option>
-                  <option>Mountain Time (MST/MDT)</option>
-                  <option>Pacific Time (PST/PDT)</option>
-                </select>
+                <Select 
+                  value={settings.timezone} 
+                  onValueChange={(value) => handleSettingChange('timezone', value)}
+                >
+                  <SelectTrigger id="timezone" className="w-full">
+                    <SelectValue placeholder="Select timezone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="UTC">UTC</SelectItem>
+                    <SelectItem value="EST">Eastern Time (EST/EDT)</SelectItem>
+                    <SelectItem value="CST">Central Time (CST/CDT)</SelectItem>
+                    <SelectItem value="MST">Mountain Time (MST/MDT)</SelectItem>
+                    <SelectItem value="PST">Pacific Time (PST/PDT)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="date-format">Date Format</Label>
-                <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                  <option>MM/DD/YYYY</option>
-                  <option>DD/MM/YYYY</option>
-                  <option>YYYY-MM-DD</option>
-                </select>
+                <Select 
+                  value={settings.dateFormat} 
+                  onValueChange={(value) => handleSettingChange('dateFormat', value)}
+                >
+                  <SelectTrigger id="date-format" className="w-full">
+                    <SelectValue placeholder="Select date format" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
+                    <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
+                    <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex items-center space-x-2">
                 <Switch 
@@ -95,6 +124,7 @@ const SettingsPage = () => {
             </CardContent>
             <CardFooter className="justify-end">
               <Button onClick={() => handleSave('General')} disabled={isLoading}>
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {isLoading ? 'Saving...' : 'Save Changes'}
               </Button>
             </CardFooter>
@@ -129,6 +159,7 @@ const SettingsPage = () => {
             </CardContent>
             <CardFooter className="justify-end">
               <Button onClick={() => handleSave('Account')} disabled={isLoading}>
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {isLoading ? 'Saving...' : 'Save Changes'}
               </Button>
             </CardFooter>
@@ -186,6 +217,7 @@ const SettingsPage = () => {
             </CardContent>
             <CardFooter className="justify-end">
               <Button onClick={() => handleSave('Notification')} disabled={isLoading}>
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {isLoading ? 'Saving...' : 'Save Changes'}
               </Button>
             </CardFooter>
@@ -202,7 +234,7 @@ const SettingsPage = () => {
               <div className="space-y-2">
                 <Label htmlFor="api-key">API Key</Label>
                 <div className="flex space-x-2">
-                  <Input id="api-key" defaultValue="••••••••••••••••••••••••••••••" readOnly />
+                  <Input id="api-key" defaultValue="••••••••••••••••••••••••••••••" readOnly className="font-mono" />
                   <Button variant="outline">Regenerate</Button>
                 </div>
                 <p className="text-sm text-muted-foreground">Use this key to access the API programmatically</p>
@@ -226,17 +258,26 @@ const SettingsPage = () => {
               
               <div className="space-y-2">
                 <Label htmlFor="data-retention">Data Retention Period</Label>
-                <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                  <option>30 days</option>
-                  <option>90 days</option>
-                  <option>180 days</option>
-                  <option>1 year</option>
-                  <option>Forever</option>
-                </select>
+                <Select 
+                  value={settings.dataRetention} 
+                  onValueChange={(value) => handleSettingChange('dataRetention', value)}
+                >
+                  <SelectTrigger id="data-retention" className="w-full">
+                    <SelectValue placeholder="Select retention period" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="30 days">30 days</SelectItem>
+                    <SelectItem value="90 days">90 days</SelectItem>
+                    <SelectItem value="180 days">180 days</SelectItem>
+                    <SelectItem value="1 year">1 year</SelectItem>
+                    <SelectItem value="Forever">Forever</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
             <CardFooter className="justify-end">
               <Button onClick={() => handleSave('Advanced')} disabled={isLoading}>
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {isLoading ? 'Saving...' : 'Save Changes'}
               </Button>
             </CardFooter>

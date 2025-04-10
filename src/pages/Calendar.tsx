@@ -1,14 +1,17 @@
 
+import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { Textarea } from "@/components/ui/textarea";
 import { format, isValid, parse } from "date-fns";
-import { CalendarRange, CalendarSearch } from "lucide-react";
+import { CalendarRange, CalendarSearch, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Define event data structure
 interface CalendarEvent {
@@ -27,6 +30,15 @@ const CalendarPage = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [currentEvents, setCurrentEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // Add Event Dialog State
+  const [addEventDialogOpen, setAddEventDialogOpen] = useState(false);
+  const [newEvent, setNewEvent] = useState({
+    title: "",
+    description: "",
+    type: "event",
+  });
+  const [addingEvent, setAddingEvent] = useState(false);
   
   // Fetch events data from sales and activities
   useEffect(() => {
@@ -68,8 +80,23 @@ const CalendarPage = () => {
           type: "activity"
         }));
         
+        // Get custom events
+        const { data: customEvents, error: customEventsError } = await supabase
+          .from('calendar_events')
+          .select('*')
+          .catch(() => ({ data: null, error: null })); // Handle if table doesn't exist yet
+        
+        // Process custom events (if table exists)
+        const customEventsList: CalendarEvent[] = customEvents ? customEvents.map((event: any) => ({
+          id: `custom-${event.id}`,
+          title: event.title,
+          date: new Date(event.event_date),
+          description: event.description,
+          type: event.event_type || "event"
+        })) : [];
+        
         // Combine all events and sort by date
-        const allEvents = [...salesEvents, ...paymentEvents]
+        const allEvents = [...salesEvents, ...paymentEvents, ...customEventsList]
           .filter(event => isValid(event.date))
           .sort((a, b) => a.date.getTime() - b.date.getTime());
           
@@ -199,6 +226,90 @@ const CalendarPage = () => {
       handleGoToDate();
     }
   };
+  
+  const openAddEventDialog = () => {
+    setNewEvent({
+      title: "",
+      description: "",
+      type: "event"
+    });
+    setAddEventDialogOpen(true);
+  };
+  
+  const handleAddEvent = async () => {
+    if (!date) {
+      toast.error("Please select a date first");
+      return;
+    }
+    
+    if (!newEvent.title.trim()) {
+      toast.error("Please enter an event title");
+      return;
+    }
+    
+    setAddingEvent(true);
+    
+    try {
+      // Create the calendar_events table if it doesn't exist yet
+      await supabase.rpc('create_calendar_events_if_not_exists').catch(() => {
+        // If RPC doesn't exist, we'll try direct insert and let error handling take care of it
+        console.log("RPC not found, will try direct insert");
+      });
+      
+      // Insert the new event
+      const { data, error } = await supabase
+        .from('calendar_events')
+        .insert({
+          title: newEvent.title,
+          description: newEvent.description,
+          event_date: format(date, 'yyyy-MM-dd'),
+          event_type: newEvent.type,
+          user_id: (await supabase.auth.getUser()).data.user?.id
+        });
+      
+      if (error) {
+        // If calendar_events table doesn't exist, we'll create it now
+        if (error.code === '42P01') { // relation does not exist
+          await supabase.rpc('create_calendar_events_table').catch(console.error);
+          
+          // Try insert again after creating table
+          const { error: secondError } = await supabase
+            .from('calendar_events')
+            .insert({
+              title: newEvent.title,
+              description: newEvent.description,
+              event_date: format(date, 'yyyy-MM-dd'),
+              event_type: newEvent.type,
+              user_id: (await supabase.auth.getUser()).data.user?.id
+            });
+            
+          if (secondError) throw secondError;
+        } else {
+          throw error;
+        }
+      }
+      
+      // Add new event to current list
+      const newEventObj: CalendarEvent = {
+        id: `custom-${Date.now()}`, // Temporary ID until refresh
+        title: newEvent.title,
+        description: newEvent.description,
+        date: date,
+        type: newEvent.type as "event" | "activity"
+      };
+      
+      setEvents(prev => [...prev, newEventObj]);
+      setCurrentEvents(prev => [...prev, newEventObj]);
+      
+      toast.success("Event added successfully");
+      setAddEventDialogOpen(false);
+    } catch (error: any) {
+      console.error("Error adding event:", error);
+      toast.error(error.message || "Failed to add event");
+    } finally {
+      setAddingEvent(false);
+    }
+  };
 
   return (
     <div className="container mx-auto p-6">
@@ -288,7 +399,7 @@ const CalendarPage = () => {
                    currentEvents.length === 0 ? "No events or activities scheduled for this date." : 
                    `${currentEvents.length} item(s) scheduled`}
                 </p>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={openAddEventDialog}>
                   <CalendarRange className="mr-2 h-4 w-4" />
                   Add Event
                 </Button>
@@ -319,6 +430,63 @@ const CalendarPage = () => {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Add Event Dialog */}
+      <Dialog open={addEventDialogOpen} onOpenChange={setAddEventDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add New Event</DialogTitle>
+            <DialogDescription>
+              Create a new event for {date ? format(date, "MMMM d, yyyy") : "the selected date"}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="event-title">Event Title</Label>
+              <Input 
+                id="event-title" 
+                value={newEvent.title}
+                onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
+                placeholder="Enter event title" 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="event-type">Event Type</Label>
+              <Select 
+                value={newEvent.type} 
+                onValueChange={(value) => setNewEvent({...newEvent, type: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select event type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="event">Event</SelectItem>
+                  <SelectItem value="activity">Activity</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="event-description">Description</Label>
+              <Textarea 
+                id="event-description" 
+                value={newEvent.description}
+                onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
+                placeholder="Enter event description" 
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setAddEventDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddEvent} disabled={addingEvent}>
+              {addingEvent && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Add Event
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

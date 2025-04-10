@@ -106,7 +106,14 @@ const EditCustomerDialog = ({ open, onOpenChange, customerNo, onUpdated }: EditC
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(newOpen) => {
+      // Ensure we properly clean up when dialog is closed
+      if (!newOpen) {
+        setTimeout(() => onOpenChange(false), 0);
+      } else {
+        onOpenChange(true);
+      }
+    }}>
       <DialogContent className="sm:max-w-[425px]">
         {loading ? (
           <div className="flex justify-center p-6">

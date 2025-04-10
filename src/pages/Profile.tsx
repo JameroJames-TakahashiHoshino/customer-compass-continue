@@ -97,22 +97,33 @@ const Profile = () => {
     
     setUpdating(true);
     try {
-      let newAvatarUrl = null;
+      let newAvatarUrl = avatarUrl;
       
       if (avatarFile) {
-        newAvatarUrl = await uploadAvatar();
+        const uploadedUrl = await uploadAvatar();
+        if (uploadedUrl) {
+          newAvatarUrl = uploadedUrl;
+        }
       }
 
       const updates = {
         data: { 
           name,
-          avatar_url: newAvatarUrl || user.user_metadata?.avatar_url
+          avatar_url: newAvatarUrl
         }
       };
 
-      const { error } = await supabase.auth.updateUser(updates);
+      const { error, data } = await supabase.auth.updateUser(updates);
 
       if (error) throw error;
+      
+      // Update local user state with new data
+      if (data.user) {
+        setUser(data.user);
+        setName(data.user.user_metadata?.name || "");
+        setAvatarUrl(data.user.user_metadata?.avatar_url || null);
+      }
+      
       toast.success("Profile updated successfully");
       setAvatarFile(null);
     } catch (error: any) {
