@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { format, isValid, parse } from "date-fns";
-import { CalendarRange, CalendarSearch, X } from "lucide-react";
+import { CalendarRange, CalendarSearch, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -82,11 +82,17 @@ const CalendarPage = () => {
         
         // Get custom events
         const { data: customEvents, error: customEventsError } = await supabase
-          .from('calendar_events')
-          .select('*')
-          .catch(() => ({ data: null, error: null })); // Handle if table doesn't exist yet
+          .rpc('create_calendar_events_if_not_exists')
+          .then(async () => {
+            // After creating table if needed, fetch the custom events
+            return await supabase
+              .from('calendar_events')
+              .select('*');
+          });
         
-        // Process custom events (if table exists)
+        if (customEventsError) throw customEventsError;
+        
+        // Process custom events
         const customEventsList: CalendarEvent[] = customEvents ? customEvents.map((event: any) => ({
           id: `custom-${event.id}`,
           title: event.title,
@@ -250,11 +256,8 @@ const CalendarPage = () => {
     setAddingEvent(true);
     
     try {
-      // Create the calendar_events table if it doesn't exist yet
-      await supabase.rpc('create_calendar_events_if_not_exists').catch(() => {
-        // If RPC doesn't exist, we'll try direct insert and let error handling take care of it
-        console.log("RPC not found, will try direct insert");
-      });
+      // Ensure calendar_events table exists
+      await supabase.rpc('create_calendar_events_if_not_exists');
       
       // Insert the new event
       const { data, error } = await supabase
@@ -263,43 +266,34 @@ const CalendarPage = () => {
           title: newEvent.title,
           description: newEvent.description,
           event_date: format(date, 'yyyy-MM-dd'),
-          event_type: newEvent.type,
-          user_id: (await supabase.auth.getUser()).data.user?.id
+          event_type: newEvent.type
         });
       
-      if (error) {
-        // If calendar_events table doesn't exist, we'll create it now
-        if (error.code === '42P01') { // relation does not exist
-          await supabase.rpc('create_calendar_events_table').catch(console.error);
-          
-          // Try insert again after creating table
-          const { error: secondError } = await supabase
-            .from('calendar_events')
-            .insert({
-              title: newEvent.title,
-              description: newEvent.description,
-              event_date: format(date, 'yyyy-MM-dd'),
-              event_type: newEvent.type,
-              user_id: (await supabase.auth.getUser()).data.user?.id
-            });
-            
-          if (secondError) throw secondError;
-        } else {
-          throw error;
-        }
-      }
+      if (error) throw error;
+      
+      // Refresh events to include the new one
+      const { data: newEventData, error: fetchError } = await supabase
+        .from('calendar_events')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      if (fetchError) throw fetchError;
       
       // Add new event to current list
-      const newEventObj: CalendarEvent = {
-        id: `custom-${Date.now()}`, // Temporary ID until refresh
-        title: newEvent.title,
-        description: newEvent.description,
-        date: date,
-        type: newEvent.type as "event" | "activity"
-      };
-      
-      setEvents(prev => [...prev, newEventObj]);
-      setCurrentEvents(prev => [...prev, newEventObj]);
+      if (newEventData && newEventData.length > 0) {
+        const addedEvent = newEventData[0];
+        const newEventObj: CalendarEvent = {
+          id: `custom-${addedEvent.id}`,
+          title: addedEvent.title,
+          description: addedEvent.description || "",
+          date: new Date(addedEvent.event_date),
+          type: (addedEvent.event_type as "event" | "activity") || "event"
+        };
+        
+        setEvents(prev => [...prev, newEventObj]);
+        setCurrentEvents(prev => [...prev, newEventObj]);
+      }
       
       toast.success("Event added successfully");
       setAddEventDialogOpen(false);
