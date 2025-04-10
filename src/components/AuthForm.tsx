@@ -13,7 +13,8 @@ import { ArrowLeft } from "lucide-react";
 import { Session } from "@supabase/supabase-js";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
-export function AuthForm() {
+// Export the component as default at the end of the file
+function AuthForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -257,6 +258,14 @@ export function AuthForm() {
                   required 
                 />
               </div>
+              <Button
+                type="button"
+                variant="link"
+                className="px-0 text-sm"
+                onClick={() => setResetPasswordMode(true)}
+              >
+                Forgot password?
+              </Button>
             </CardContent>
             <CardFooter>
               <Button type="submit" className="w-full" disabled={isLoading}>
