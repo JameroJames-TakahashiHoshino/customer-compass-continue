@@ -50,15 +50,7 @@ export function Navbar() {
       // Get recent payments
       const { data: recentPayments, error: paymentsError } = await supabase
         .from('payment')
-        .select(`
-          orno, 
-          paydate, 
-          amount, 
-          transno,
-          sales:transno (
-            customer:custno (custname)
-          )
-        `)
+        .select('orno, paydate, amount, transno')
         .order('paydate', { ascending: false })
         .limit(2);
         
@@ -79,7 +71,7 @@ export function Navbar() {
           description: `${payment.amount ? new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: 'USD'
-          }).format(payment.amount) : 'Payment'} for transaction #${payment.transno || ''} from ${payment.sales?.customer?.custname || 'customer'}`,
+          }).format(payment.amount) : 'Payment'} for transaction #${payment.transno || ''}`,
           time: payment.paydate ? new Date(payment.paydate).toLocaleDateString() : 'recent',
           type: 'payment'
         }))

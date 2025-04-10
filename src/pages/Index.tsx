@@ -1,109 +1,31 @@
 
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Link } from "react-router-dom";
+import AuthForm from "@/components/AuthForm";
+import { Shield } from "lucide-react";
 
-const IndexPage = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const navigate = useNavigate();
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!email || !password) {
-      toast.error("Email and password are required");
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      if (error) throw error;
-      
-      toast.success("Logged in successfully");
-      navigate("/dashboard");
-    } catch (error: any) {
-      console.error("Login error:", error);
-      toast.error(error.message || "Failed to log in");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+export default function IndexPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background auth-background">
-      <Card className="w-full max-w-md mx-4 shadow-lg">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">ClientChronicle</CardTitle>
-          <CardDescription>Enter your credentials to sign in</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                placeholder="your.email@example.com" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="dark:text-foreground dark:bg-background"
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-              </div>
-              <Input 
-                id="password" 
-                type="password" 
-                placeholder="••••••••" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="dark:text-foreground dark:bg-background"
-              />
-            </div>
-          </form>
-        </CardContent>
-        <CardFooter className="flex flex-col">
-          <Button 
-            className="w-full" 
-            onClick={handleLogin}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Signing in...
-              </>
-            ) : (
-              "Sign In"
-            )}
-          </Button>
-          <p className="mt-4 text-sm text-center text-muted-foreground">
-            <a href="/admin-login" className="underline hover:text-primary">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-secondary/10 p-4">
+      <div className="max-w-md w-full space-y-6">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-extrabold tracking-tight">CRM Dashboard</h1>
+          <p className="text-lg text-muted-foreground mt-2">Manage your customers and transactions</p>
+        </div>
+        
+        <AuthForm />
+        
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground mb-2">Are you an administrator?</p>
+          <Button variant="outline" asChild className="w-full">
+            <Link to="/admin-login">
+              <Shield className="mr-2 h-4 w-4" />
               Admin Login
-            </a>
-          </p>
-        </CardFooter>
-      </Card>
+            </Link>
+          </Button>
+        </div>
+      </div>
     </div>
   );
-};
-
-export default IndexPage;
+}

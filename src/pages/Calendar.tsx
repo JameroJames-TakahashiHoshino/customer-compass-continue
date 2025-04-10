@@ -4,20 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription,
-  DialogFooter,
-  DialogClose
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { format, isValid, parse } from "date-fns";
-import { CalendarRange, CalendarSearch, Info } from "lucide-react";
+import { CalendarRange, CalendarSearch } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -38,15 +27,6 @@ const CalendarPage = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [currentEvents, setCurrentEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(false);
-  const [eventDetailsOpen, setEventDetailsOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const [addEventOpen, setAddEventOpen] = useState(false);
-  const [newEvent, setNewEvent] = useState({
-    title: "",
-    description: "",
-    type: "event",
-    date: new Date()
-  });
   
   // Fetch events data from sales and activities
   useEffect(() => {
@@ -108,9 +88,6 @@ const CalendarPage = () => {
   // Update current events whenever date changes
   useEffect(() => {
     if (date) {
-      // Update calendar view to match the selected date
-      document.querySelector('.rdp-caption')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      
       // Filter events for the selected date
       const selectedDateEvents = events.filter(event => {
         const eventDate = new Date(event.date);
@@ -129,21 +106,19 @@ const CalendarPage = () => {
 
   const handleGoToDate = () => {
     try {
-      // Validate month input
+      // First, validate each piece separately
+      if (!yearInput.match(/^\d{4}$/)) {
+        toast.error("Year must be a 4-digit number");
+        return;
+      }
+      
       if (!monthInput.match(/^(0?[1-9]|1[0-2])$/)) {
         toast.error("Month must be a number between 1-12");
         return;
       }
       
-      // Validate day input
       if (!dayInput.match(/^(0?[1-9]|[12][0-9]|3[01])$/)) {
         toast.error("Day must be a number between 1-31");
-        return;
-      }
-      
-      // Validate year input
-      if (!yearInput.match(/^\d{4}$/)) {
-        toast.error("Year must be a 4-digit number");
         return;
       }
       
@@ -225,57 +200,6 @@ const CalendarPage = () => {
     }
   };
 
-  const showEventDetails = (event: CalendarEvent) => {
-    setSelectedEvent(event);
-    setEventDetailsOpen(true);
-  };
-
-  const handleAddEventClick = () => {
-    if (date) {
-      setNewEvent({
-        ...newEvent,
-        date: date
-      });
-    }
-    setAddEventOpen(true);
-  };
-
-  const handleAddEvent = () => {
-    if (!newEvent.title) {
-      toast.error("Event title is required");
-      return;
-    }
-
-    // In a real app, we would save to database
-    const eventToAdd: CalendarEvent = {
-      id: `new-${Date.now()}`,
-      title: newEvent.title,
-      description: newEvent.description,
-      date: newEvent.date,
-      type: newEvent.type as "event" | "activity"
-    };
-
-    setEvents(prev => [...prev, eventToAdd]);
-    
-    if (
-      eventToAdd.date.getDate() === date?.getDate() &&
-      eventToAdd.date.getMonth() === date?.getMonth() &&
-      eventToAdd.date.getFullYear() === date?.getFullYear()
-    ) {
-      setCurrentEvents(prev => [...prev, eventToAdd]);
-    }
-
-    setAddEventOpen(false);
-    setNewEvent({
-      title: "",
-      description: "",
-      type: "event",
-      date: date || new Date()
-    });
-
-    toast.success("Event added successfully");
-  };
-
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">Calendar</h1>
@@ -296,7 +220,7 @@ const CalendarPage = () => {
                     value={monthInput}
                     onChange={handleMonthChange}
                     onKeyPress={handleKeyPress}
-                    className="w-[80px] dark:text-foreground dark:bg-background"
+                    className="w-[80px]"
                     placeholder="MM"
                   />
                 </div>
@@ -307,7 +231,7 @@ const CalendarPage = () => {
                     value={dayInput}
                     onChange={handleDayChange}
                     onKeyPress={handleKeyPress}
-                    className="w-[80px] dark:text-foreground dark:bg-background"
+                    className="w-[80px]"
                     placeholder="DD"
                   />
                 </div>
@@ -318,7 +242,7 @@ const CalendarPage = () => {
                     value={yearInput}
                     onChange={handleYearChange}
                     onKeyPress={handleKeyPress}
-                    className="w-[100px] dark:text-foreground dark:bg-background"
+                    className="w-[100px]"
                     placeholder="YYYY"
                   />
                 </div>
@@ -342,7 +266,6 @@ const CalendarPage = () => {
               className="rounded-md border pointer-events-auto"
               month={date}
               onMonthChange={(newDate) => {
-                setDate(newDate);
                 setYearInput(format(newDate, "yyyy"));
                 setMonthInput(format(newDate, "MM"));
               }}
@@ -365,7 +288,7 @@ const CalendarPage = () => {
                    currentEvents.length === 0 ? "No events or activities scheduled for this date." : 
                    `${currentEvents.length} item(s) scheduled`}
                 </p>
-                <Button variant="outline" size="sm" onClick={handleAddEventClick}>
+                <Button variant="outline" size="sm">
                   <CalendarRange className="mr-2 h-4 w-4" />
                   Add Event
                 </Button>
@@ -385,7 +308,7 @@ const CalendarPage = () => {
                           <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
                         </div>
                         <div className="flex space-x-2">
-                          <Button size="sm" variant="ghost" onClick={() => showEventDetails(event)}>Details</Button>
+                          <Button size="sm" variant="ghost">Details</Button>
                         </div>
                       </div>
                     </Card>
@@ -396,85 +319,6 @@ const CalendarPage = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Event Details Dialog */}
-      <Dialog open={eventDetailsOpen} onOpenChange={setEventDetailsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{selectedEvent?.title}</DialogTitle>
-            <DialogDescription>
-              Event details for {selectedEvent?.date ? format(selectedEvent.date, "MMMM d, yyyy") : ""}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="flex items-center space-x-2">
-              <span className={`inline-block w-3 h-3 rounded-full ${selectedEvent?.type === "event" ? "bg-primary" : "bg-secondary"}`}></span>
-              <span className="font-medium">{selectedEvent?.type === "event" ? "Sale" : "Payment"}</span>
-            </div>
-            <p>{selectedEvent?.description}</p>
-          </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button>Close</Button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Event Dialog */}
-      <Dialog open={addEventOpen} onOpenChange={setAddEventOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Event</DialogTitle>
-            <DialogDescription>
-              Create a new event or activity on {date ? format(date, "MMMM d, yyyy") : ""}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="event-title">Event Title</Label>
-              <Input 
-                id="event-title" 
-                value={newEvent.title}
-                onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
-                placeholder="Enter event title"
-                className="dark:text-foreground dark:bg-background"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="event-type">Event Type</Label>
-              <Select 
-                value={newEvent.type} 
-                onValueChange={(value) => setNewEvent({...newEvent, type: value})}
-              >
-                <SelectTrigger id="event-type">
-                  <SelectValue placeholder="Select event type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="event">Sale</SelectItem>
-                  <SelectItem value="activity">Payment</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="event-description">Description</Label>
-              <Textarea
-                id="event-description"
-                value={newEvent.description}
-                onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
-                placeholder="Enter event description"
-                className="dark:text-foreground dark:bg-background"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddEventOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddEvent}>Add Event</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

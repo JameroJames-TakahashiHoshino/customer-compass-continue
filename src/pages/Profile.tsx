@@ -66,18 +66,7 @@ const Profile = () => {
     setUploading(true);
     try {
       const fileExt = avatarFile.name.split('.').pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
-
-      // Check if the avatars bucket exists, create it if it doesn't
-      const { data: buckets } = await supabase.storage.listBuckets();
-      const avatarBucketExists = buckets?.some(bucket => bucket.name === 'avatars');
-      
-      if (!avatarBucketExists) {
-        await supabase.storage.createBucket('avatars', {
-          public: true
-        });
-      }
+      const filePath = `avatars/${user.id}.${fileExt}`;
 
       // Upload the file to Supabase Storage
       const { error: uploadError, data } = await supabase.storage
@@ -96,7 +85,6 @@ const Profile = () => {
 
       return urlData.publicUrl;
     } catch (error: any) {
-      console.error("Error uploading avatar:", error);
       toast.error(`Error uploading avatar: ${error.message}`);
       return null;
     } finally {
@@ -109,28 +97,24 @@ const Profile = () => {
     
     setUpdating(true);
     try {
-      let newAvatarUrl = avatarUrl;
+      let newAvatarUrl = null;
       
       if (avatarFile) {
-        const uploadedUrl = await uploadAvatar();
-        if (uploadedUrl) {
-          newAvatarUrl = uploadedUrl;
-        }
+        newAvatarUrl = await uploadAvatar();
       }
 
-      // Update user metadata
-      const { error } = await supabase.auth.updateUser({
+      const updates = {
         data: { 
-          name: name,
-          avatar_url: newAvatarUrl
+          name,
+          avatar_url: newAvatarUrl || user.user_metadata?.avatar_url
         }
-      });
+      };
+
+      const { error } = await supabase.auth.updateUser(updates);
 
       if (error) throw error;
-      
-      // Update the displayed data
-      setAvatarFile(null);
       toast.success("Profile updated successfully");
+      setAvatarFile(null);
     } catch (error: any) {
       toast.error(error.message || "Failed to update profile");
     } finally {
@@ -188,7 +172,6 @@ const Profile = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your name"
-                className="dark:text-foreground dark:bg-background"
               />
             </div>
             <div className="space-y-2">

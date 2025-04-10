@@ -1,77 +1,50 @@
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
-const Settings = () => {
-  const [loading, setLoading] = useState(false);
+const SettingsPage = () => {
+  const [isLoading, setIsLoading] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const [dateFormat, setDateFormat] = useState("MM/DD/YYYY");
-  const [timeFormat, setTimeFormat] = useState("12h");
 
-  // Load the current theme
+  // Check for dark mode preference on initial load
   useEffect(() => {
-    const theme = localStorage.getItem('theme');
-    setDarkMode(theme === 'dark');
-    
-    // Set default theme if not set
-    if (!theme) {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
+    // Check if document has dark class or local storage setting
+    const isDarkMode = document.documentElement.classList.contains('dark') || 
+                      localStorage.getItem('theme') === 'dark';
+    setDarkMode(isDarkMode);
   }, []);
 
-  const handleThemeChange = (checked: boolean) => {
-    setDarkMode(checked);
-    
-    if (checked) {
+  const toggleDarkMode = (enabled: boolean) => {
+    setDarkMode(enabled);
+    if (enabled) {
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
       localStorage.setItem('theme', 'light');
     }
-    
-    toast.success(`${checked ? 'Dark' : 'Light'} mode enabled`);
   };
 
-  const handleSaveGeneralSettings = () => {
-    setLoading(true);
+  const handleSave = (section: string) => {
+    setIsLoading(true);
     
-    // Save theme setting (already handled in handleThemeChange)
+    // If General settings, apply dark mode
+    if (section === 'General') {
+      toggleDarkMode(darkMode);
+    }
     
-    // Simulate saving
+    // Simulate API call
     setTimeout(() => {
-      setLoading(false);
-      toast.success("Settings saved successfully");
-    }, 800);
-  };
-
-  const handleSaveNotificationSettings = () => {
-    setLoading(true);
-    
-    // Simulate saving
-    setTimeout(() => {
-      setLoading(false);
-      toast.success("Notification preferences saved");
-    }, 800);
-  };
-  
-  const handleSaveDisplaySettings = () => {
-    setLoading(true);
-    
-    // Simulate saving
-    setTimeout(() => {
-      setLoading(false);
-      toast.success("Display settings saved successfully");
-    }, 800);
+      setIsLoading(false);
+      toast.success(`${section} settings saved successfully`);
+    }, 1000);
   };
 
   return (
@@ -79,112 +52,84 @@ const Settings = () => {
       <h1 className="text-3xl font-bold mb-6">Settings</h1>
       
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="mb-6">
+        <TabsList className="grid w-full grid-cols-4 mb-6">
           <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="display">Display</TabsTrigger>
+          <TabsTrigger value="account">Account</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="advanced">Advanced</TabsTrigger>
         </TabsList>
         
         <TabsContent value="general">
           <Card>
             <CardHeader>
               <CardTitle>General Settings</CardTitle>
-              <CardDescription>Manage your general application preferences</CardDescription>
+              <CardDescription>Manage your general application settings</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="theme">Dark Mode</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Switch between light and dark themes
-                  </p>
-                </div>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="timezone">Timezone</Label>
+                <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                  <option>UTC</option>
+                  <option>Eastern Time (EST/EDT)</option>
+                  <option>Central Time (CST/CDT)</option>
+                  <option>Mountain Time (MST/MDT)</option>
+                  <option>Pacific Time (PST/PDT)</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="date-format">Date Format</Label>
+                <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                  <option>MM/DD/YYYY</option>
+                  <option>DD/MM/YYYY</option>
+                  <option>YYYY-MM-DD</option>
+                </select>
+              </div>
+              <div className="flex items-center space-x-2">
                 <Switch 
-                  id="theme" 
-                  checked={darkMode} 
-                  onCheckedChange={handleThemeChange}
+                  id="dark-mode" 
+                  checked={darkMode}
+                  onCheckedChange={setDarkMode}
                 />
+                <Label htmlFor="dark-mode">Enable Dark Mode</Label>
               </div>
             </CardContent>
-            <CardFooter>
-              <Button 
-                onClick={handleSaveGeneralSettings} 
-                disabled={loading}
-              >
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Changes
+            <CardFooter className="justify-end">
+              <Button onClick={() => handleSave('General')} disabled={isLoading}>
+                {isLoading ? 'Saving...' : 'Save Changes'}
               </Button>
             </CardFooter>
           </Card>
         </TabsContent>
         
-        <TabsContent value="display">
+        <TabsContent value="account">
           <Card>
             <CardHeader>
-              <CardTitle>Display Settings</CardTitle>
-              <CardDescription>Customize how dates and times are displayed</CardDescription>
+              <CardTitle>Account Settings</CardTitle>
+              <CardDescription>Manage your account settings and preferences</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="date-format">Date Format</Label>
-                <Select value={dateFormat} onValueChange={setDateFormat}>
-                  <SelectTrigger id="date-format" className="dark:text-foreground">
-                    <SelectValue placeholder="Select date format" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
-                    <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
-                    <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
-                    <SelectItem value="MMMM D, YYYY">MMMM D, YYYY</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Choose how dates appear throughout the application
-                </p>
+                <Label htmlFor="current-password">Current Password</Label>
+                <Input id="current-password" type="password" />
               </div>
-              
               <div className="space-y-2">
-                <Label htmlFor="time-format">Time Format</Label>
-                <Select value={timeFormat} onValueChange={setTimeFormat}>
-                  <SelectTrigger id="time-format" className="dark:text-foreground">
-                    <SelectValue placeholder="Select time format" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="12h">12-hour (e.g., 2:30 PM)</SelectItem>
-                    <SelectItem value="24h">24-hour (e.g., 14:30)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Choose how times appear throughout the application
-                </p>
+                <Label htmlFor="new-password">New Password</Label>
+                <Input id="new-password" type="password" />
               </div>
-              
               <div className="space-y-2">
-                <Label htmlFor="currency-symbol">Currency Symbol</Label>
-                <Select defaultValue="USD">
-                  <SelectTrigger id="currency-symbol" className="dark:text-foreground">
-                    <SelectValue placeholder="Select currency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="USD">$ (USD)</SelectItem>
-                    <SelectItem value="EUR">€ (EUR)</SelectItem>
-                    <SelectItem value="GBP">£ (GBP)</SelectItem>
-                    <SelectItem value="JPY">¥ (JPY)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Choose the default currency for the application
-                </p>
+                <Label htmlFor="confirm-password">Confirm New Password</Label>
+                <Input id="confirm-password" type="password" />
+              </div>
+              <Separator className="my-4" />
+              <div className="space-y-2">
+                <h3 className="text-lg font-medium">Danger Zone</h3>
+                <p className="text-sm text-muted-foreground">Permanently delete your account and all of its data.</p>
+                <Button variant="destructive">Delete Account</Button>
               </div>
             </CardContent>
-            <CardFooter>
-              <Button 
-                onClick={handleSaveDisplaySettings} 
-                disabled={loading}
-              >
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Display Settings
+            <CardFooter className="justify-end">
+              <Button onClick={() => handleSave('Account')} disabled={isLoading}>
+                {isLoading ? 'Saving...' : 'Save Changes'}
               </Button>
             </CardFooter>
           </Card>
@@ -193,73 +138,108 @@ const Settings = () => {
         <TabsContent value="notifications">
           <Card>
             <CardHeader>
-              <CardTitle>Notification Preferences</CardTitle>
-              <CardDescription>Manage how you receive notifications</CardDescription>
+              <CardTitle>Notification Settings</CardTitle>
+              <CardDescription>Control how and when you receive notifications</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="email-notifications">Email Notifications</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Receive notifications via email
-                  </p>
+            <CardContent className="space-y-4">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium">Email Notifications</h3>
+                    <p className="text-sm text-muted-foreground">Receive email notifications about important updates</p>
+                  </div>
+                  <Switch id="email-notifications" defaultChecked />
                 </div>
-                <Switch id="email-notifications" defaultChecked />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="new-sales">New Sales</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Get notified when a new sale is created
-                  </p>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium">New Customer Alerts</h3>
+                    <p className="text-sm text-muted-foreground">Get notified when a new customer is added</p>
+                  </div>
+                  <Switch id="customer-notifications" defaultChecked />
                 </div>
-                <Switch id="new-sales" defaultChecked />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="new-payments">New Payments</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Get notified when a new payment is received
-                  </p>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium">Payment Notifications</h3>
+                    <p className="text-sm text-muted-foreground">Get notified when payments are received</p>
+                  </div>
+                  <Switch id="payment-notifications" defaultChecked />
                 </div>
-                <Switch id="new-payments" defaultChecked />
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium">System Updates</h3>
+                    <p className="text-sm text-muted-foreground">Get notified about system updates and maintenance</p>
+                  </div>
+                  <Switch id="system-notifications" />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium">Marketing Communications</h3>
+                    <p className="text-sm text-muted-foreground">Receive newsletters and promotional emails</p>
+                  </div>
+                  <Switch id="marketing-notifications" />
+                </div>
               </div>
             </CardContent>
-            <CardFooter>
-              <Button 
-                onClick={handleSaveNotificationSettings} 
-                disabled={loading}
-              >
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Preferences
+            <CardFooter className="justify-end">
+              <Button onClick={() => handleSave('Notification')} disabled={isLoading}>
+                {isLoading ? 'Saving...' : 'Save Changes'}
               </Button>
             </CardFooter>
           </Card>
         </TabsContent>
         
-        <TabsContent value="security">
+        <TabsContent value="advanced">
           <Card>
             <CardHeader>
-              <CardTitle>Security Settings</CardTitle>
-              <CardDescription>Manage your security preferences</CardDescription>
+              <CardTitle>Advanced Settings</CardTitle>
+              <CardDescription>Configure advanced system settings</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="two-factor">Two-Factor Authentication</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Secure your account with two-factor authentication
-                  </p>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="api-key">API Key</Label>
+                <div className="flex space-x-2">
+                  <Input id="api-key" defaultValue="••••••••••••••••••••••••••••••" readOnly />
+                  <Button variant="outline">Regenerate</Button>
                 </div>
-                <Switch id="two-factor" />
+                <p className="text-sm text-muted-foreground">Use this key to access the API programmatically</p>
               </div>
               
               <div className="space-y-2">
-                <Button variant="outline">Change Password</Button>
+                <Label htmlFor="webhook-url">Webhook URL</Label>
+                <Input id="webhook-url" placeholder="https://your-service.com/webhook" />
+                <p className="text-sm text-muted-foreground">We'll send event notifications to this URL</p>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Switch id="debug-mode" />
+                <Label htmlFor="debug-mode">Enable Debug Mode</Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Switch id="beta-features" />
+                <Label htmlFor="beta-features">Enable Beta Features</Label>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="data-retention">Data Retention Period</Label>
+                <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                  <option>30 days</option>
+                  <option>90 days</option>
+                  <option>180 days</option>
+                  <option>1 year</option>
+                  <option>Forever</option>
+                </select>
               </div>
             </CardContent>
+            <CardFooter className="justify-end">
+              <Button onClick={() => handleSave('Advanced')} disabled={isLoading}>
+                {isLoading ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </CardFooter>
           </Card>
         </TabsContent>
       </Tabs>
@@ -267,4 +247,4 @@ const Settings = () => {
   );
 };
 
-export default Settings;
+export default SettingsPage;

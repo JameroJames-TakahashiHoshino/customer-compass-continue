@@ -35,13 +35,11 @@ const AddCustomer = () => {
     setLoading(true);
     try {
       // Check if customer ID already exists
-      const { data: existingCustomer, error: checkError } = await supabase
+      const { data: existingCustomer } = await supabase
         .from('customer')
         .select('custno')
         .eq('custno', formData.custno)
-        .maybeSingle();
-
-      if (checkError) throw checkError;
+        .single();
 
       if (existingCustomer) {
         toast.error("A customer with this ID already exists");
@@ -52,14 +50,13 @@ const AddCustomer = () => {
       // Insert new customer
       const { error } = await supabase
         .from('customer')
-        .insert([formData]);
+        .insert(formData);
 
       if (error) throw error;
 
       toast.success("Customer added successfully");
       navigate('/customers');
     } catch (error: any) {
-      console.error("Error adding customer:", error);
       toast.error(error.message || "Failed to add customer");
     } finally {
       setLoading(false);
@@ -94,7 +91,6 @@ const AddCustomer = () => {
                 onChange={handleChange}
                 placeholder="Unique customer identifier"
                 required
-                className="dark:text-foreground dark:bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -105,7 +101,6 @@ const AddCustomer = () => {
                 onChange={handleChange}
                 placeholder="Customer name"
                 required
-                className="dark:text-foreground dark:bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -116,7 +111,6 @@ const AddCustomer = () => {
                 onChange={handleChange}
                 placeholder="Customer address"
                 rows={3}
-                className="dark:text-foreground dark:bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -126,7 +120,6 @@ const AddCustomer = () => {
                 value={formData.payterm}
                 onChange={handleChange}
                 placeholder="Payment terms"
-                className="dark:text-foreground dark:bg-background"
               />
             </div>
           </CardContent>

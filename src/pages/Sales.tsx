@@ -1,165 +1,289 @@
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Session } from "@supabase/supabase-js";
+import { 
+  Table, 
+  TableBody, 
+  TableCaption, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { 
+  Pagination, 
+  PaginationContent, 
+  PaginationItem, 
+  PaginationLink, 
+  PaginationNext, 
+  PaginationPrevious 
+} from "@/components/ui/pagination";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
-import { Loader2, Search } from "lucide-react";
+import { Search, Loader2, Eye } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { useDebounce } from "@/hooks/use-debounce";
+
+interface SalesType {
+  transno: string;
+  salesdate: string | null;
+  custno: string | null;
+  customer?: {
+    custname: string | null;
+  };
+}
 
 const Sales = () => {
-  const [sales, setSales] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [sales, setSales] = useState<SalesType[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [noResults, setNoResults] = useState(false);
+  const itemsPerPage = 10;
 
   useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      
+      if (!session) {
+        navigate("/");
+        return;
+      }
+      
+      fetchSales();
+    };
+
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (!session) {
+        navigate("/");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [navigate, currentPage]);
+
+  // Effect to handle search term changes
+  useEffect(() => {
+    setCurrentPage(1); // Reset to first page when search term changes
     fetchSales();
-  }, []);
+  }, [debouncedSearchTerm]);
 
   const fetchSales = async () => {
     setLoading(true);
+    setNoResults(false);
     try {
-      const { data, error } = await supabase
+      // Calculate pagination range
+      const from = (currentPage - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
+
+      let query = supabase
         .from('sales')
         .select(`
-          transno,
-          salesdate,
-          custno,
-          grandtotal,
+          *,
           customer:custno (custname)
-        `)
-        .order('salesdate', { ascending: false });
+        `, { count: 'exact' });
 
-      if (error) throw error;
-      setSales(data || []);
-    } catch (error: any) {
-      toast.error(`Error fetching sales: ${error.message}`);
+      // Apply search filter if searchTerm exists
+      if (debouncedSearchTerm.trim()) {
+        query = query
+          .or(`transno.ilike.%${debouncedSearchTerm.trim()}%,custno.ilike.%${debouncedSearchTerm.trim()}%`);
+      }
+
+      // Get paginated results
+      const { data, count, error } = await query
+        .range(from, to)
+        .order('transno', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching sales:', error);
+        toast.error("Error fetching sales data");
+        return;
+      }
+
+      setSales(data as SalesType[]);
+      
+      // Set no results flag
+      if (data && data.length === 0 && debouncedSearchTerm.trim()) {
+        setNoResults(true);
+      } else {
+        setNoResults(false);
+      }
+      
+      // Calculate total pages
+      if (count !== null) {
+        setTotalPages(Math.ceil(count / itemsPerPage));
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error("An error occurred while fetching data");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSearch = async () => {
-    if (!searchTerm.trim()) {
-      fetchSales();
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('sales')
-        .select(`
-          transno,
-          salesdate,
-          custno,
-          grandtotal,
-          customer:custno (custname)
-        `)
-        .or(`transno.ilike.%${searchTerm}%,custno.ilike.%${searchTerm}%`)
-        .order('salesdate', { ascending: false });
-
-      if (error) throw error;
-      setSales(data || []);
-    } catch (error: any) {
-      toast.error(`Error searching sales: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount || 0);
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
 
   const handleViewSale = (transno: string) => {
+    // Navigate to the sales detail page
     navigate(`/sales-detail/${transno}`);
   };
 
-  return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">Sales</h1>
+  if (loading && !sales.length) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Sales Overview</CardTitle>
-          <CardDescription>View and manage all sales transactions</CardDescription>
+  const formatDate = (date: string | null) => {
+    if (!date) return "-";
+    return new Date(date).toLocaleDateString();
+  };
+
+  const getCustomerName = (sale: SalesType) => {
+    if (sale.customer && sale.customer.custname) {
+      return sale.customer.custname;
+    }
+    return sale.custno || "-";
+  };
+
+  return (
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-3xl font-bold tracking-tight">Sales</h2>
+      </div>
+      
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle>Sales Records</CardTitle>
+          <div className="flex w-full max-w-sm items-center space-x-2 mt-2">
+            <Input
+              type="search"
+              placeholder="Search sales transactions..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="w-full"
+            />
+            <Search className="h-4 w-4 text-muted-foreground" />
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center space-x-2 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search by transaction number or customer..."
-                className="pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={handleKeyPress}
-              />
-            </div>
-            <Button onClick={handleSearch}>Search</Button>
-          </div>
-
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : sales.length > 0 ? (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Transaction #</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sales.map((sale) => (
-                    <TableRow key={sale.transno}>
-                      <TableCell className="font-medium">{sale.transno}</TableCell>
-                      <TableCell>
-                        {new Date(sale.salesdate).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        {sale.customer?.custname || sale.custno}
-                      </TableCell>
-                      <TableCell>
-                        {formatCurrency(sale.grandtotal)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleViewSale(sale.transno)}
-                        >
-                          View
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+          {loading && sales.length > 0 ? (
+            <div className="flex justify-center py-4">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              No results found
-            </div>
+            <>
+              <div className="rounded-md border">
+                <Table>
+                  <TableCaption>
+                    {noResults
+                      ? `No results found for "${debouncedSearchTerm}"`
+                      : sales.length === 0
+                        ? "No sales found"
+                        : `Showing ${sales.length} of ${totalPages * itemsPerPage} sales records`}
+                  </TableCaption>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Transaction No</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sales.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                          {noResults ? `No results found for "${debouncedSearchTerm}"` : "No sales records available"}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      sales.map((sale) => (
+                        <TableRow key={sale.transno}>
+                          <TableCell className="font-medium">{sale.transno}</TableCell>
+                          <TableCell>{formatDate(sale.salesdate)}</TableCell>
+                          <TableCell>
+                            {sale.custno ? (
+                              <Link 
+                                to={`/customers/${sale.custno}`} 
+                                className="text-primary hover:underline"
+                              >
+                                {getCustomerName(sale)}
+                              </Link>
+                            ) : (
+                              "-"
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleViewSale(sale.transno)}
+                            >
+                              <Eye className="h-4 w-4 mr-1" /> View
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {totalPages > 1 && (
+                <Pagination className="mt-4">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+                        className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                    
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          isActive={currentPage === page}
+                          onClick={() => handlePageChange(page)}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    
+                    <PaginationItem>
+                      <PaginationNext 
+                        onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

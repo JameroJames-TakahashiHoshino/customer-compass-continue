@@ -19,6 +19,8 @@ import Calendar from "@/pages/Calendar";
 import Messages from "@/pages/Messages";
 import Analytics from "@/pages/Analytics";
 import Settings from "@/pages/Settings";
+
+// Import SalesDetail
 import SalesDetail from "@/pages/SalesDetail";
 
 // Check for dark mode
@@ -31,9 +33,15 @@ const setInitialTheme = () => {
   } else if (storedTheme === 'light') {
     document.documentElement.classList.remove('dark');
   } else {
-    // Default to light mode
-    document.documentElement.classList.remove('dark');
-    localStorage.setItem('theme', 'light');
+    // If no preference set, check user's system preference
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (prefersDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
   }
 };
 

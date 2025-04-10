@@ -28,29 +28,12 @@ interface CustomerActionsProps {
 const CustomerActions = ({ customerNo, onEdit, onDeleted }: CustomerActionsProps) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const handleDelete = async () => {
     if (!customerNo) return;
     
     setIsDeleting(true);
     try {
-      // Check if customer has any related sales records
-      const { data: salesData, error: salesError } = await supabase
-        .from('sales')
-        .select('transno')
-        .eq('custno', customerNo)
-        .limit(1);
-      
-      if (salesError) throw salesError;
-      
-      if (salesData && salesData.length > 0) {
-        toast.error("Cannot delete customer with existing sales records");
-        setIsDeleting(false);
-        setDeleteDialogOpen(false);
-        return;
-      }
-      
       const { error } = await supabase
         .from('customer')
         .delete()
@@ -68,17 +51,9 @@ const CustomerActions = ({ customerNo, onEdit, onDeleted }: CustomerActionsProps
     }
   };
 
-  // Force close dropdown when dialog is closed
-  const handleDialogOpenChange = (open: boolean) => {
-    setDeleteDialogOpen(open);
-    if (!open) {
-      setDropdownOpen(false);
-    }
-  };
-
   return (
     <>
-      <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+      <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon">
             <MoreHorizontal className="h-4 w-4" />
@@ -86,18 +61,12 @@ const CustomerActions = ({ customerNo, onEdit, onDeleted }: CustomerActionsProps
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => {
-            onEdit();
-            setDropdownOpen(false);
-          }}>
+          <DropdownMenuItem onClick={onEdit}>
             <Edit className="mr-2 h-4 w-4" />
             Edit
           </DropdownMenuItem>
           <DropdownMenuItem 
-            onClick={() => {
-              setDeleteDialogOpen(true);
-              setDropdownOpen(false);
-            }}
+            onClick={() => setDeleteDialogOpen(true)}
             className="text-destructive focus:text-destructive"
           >
             <Trash2 className="mr-2 h-4 w-4" />
@@ -106,7 +75,7 @@ const CustomerActions = ({ customerNo, onEdit, onDeleted }: CustomerActionsProps
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={deleteDialogOpen} onOpenChange={handleDialogOpenChange}>
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Customer</DialogTitle>
