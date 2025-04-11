@@ -9,36 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      calendar_events: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          event_date: string
-          event_type: string | null
-          id: string
-          title: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          event_date: string
-          event_type?: string | null
-          id?: string
-          title: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          event_date?: string
-          event_type?: string | null
-          id?: string
-          title?: string
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       customer: {
         Row: {
           address: string | null
@@ -313,14 +283,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      create_calendar_events_if_not_exists: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      create_calendar_events_table: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
