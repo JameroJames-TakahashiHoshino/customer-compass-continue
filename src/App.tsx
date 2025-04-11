@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,7 +10,7 @@ import Customers from "@/pages/Customers";
 import Sales from "@/pages/Sales";
 import Payments from "@/pages/Payments";
 import CustomerDetail from "@/pages/CustomerDetail";
-import DefaultLayout from "@/layouts/DefaultLayout";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import Help from "@/pages/Help";
 import Profile from "@/pages/Profile";
 import AddCustomer from "@/pages/AddCustomer";
@@ -143,7 +142,9 @@ function App() {
           <Route element={
             <ProtectedRoute>
               <DefaultLayoutWrapper>
-                <DefaultLayout />
+                <DashboardLayout>
+                  {/* This will render the children */}
+                </DashboardLayout>
               </DefaultLayoutWrapper>
             </ProtectedRoute>
           }>
