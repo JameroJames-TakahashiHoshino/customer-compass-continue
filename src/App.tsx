@@ -116,7 +116,6 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 function App() {
-  // Initialize theme on app load
   useEffect(() => {
     setInitialTheme();
   }, []);
@@ -139,11 +138,11 @@ function App() {
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           
-          <Route element={
+          <Route path="/" element={
             <ProtectedRoute>
               <DefaultLayoutWrapper>
                 <DashboardLayout>
-                  {/* This will render the children */}
+                  {/* Outlet will be rendered here */}
                 </DashboardLayout>
               </DefaultLayoutWrapper>
             </ProtectedRoute>
