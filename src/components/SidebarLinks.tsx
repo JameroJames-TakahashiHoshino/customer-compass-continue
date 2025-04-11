@@ -57,7 +57,7 @@ function SidebarItem({ to, title, icon: Icon }) {
           className={({ isActive }) => isActive ? "text-primary" : ""}
         >
           <Icon className="h-4 w-4 mr-2" />
-          <span>{title}</span>
+          {title}
         </NavLink>
       </SidebarMenuButton>
     </SidebarMenuItem>

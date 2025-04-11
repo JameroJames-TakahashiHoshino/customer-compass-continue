@@ -22,6 +22,7 @@ import Settings from "@/pages/Settings";
 import { Toaster } from "@/components/ui/sonner";
 import { DefaultLayoutWrapper } from "@/layouts/DefaultLayout";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import Auth from "@/pages/Auth";
 
 // Import SalesDetail
 import SalesDetail from "@/pages/SalesDetail";
@@ -48,69 +49,69 @@ const setInitialTheme = () => {
   }
 };
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const [loading, setLoading] = useState(true);
-  const [authenticated, setAuthenticated] = useState(false);
+// Check if a user is logged in
+const AuthRoute = ({ children }: { children: React.ReactNode }) => {
+  const [session, setSession] = useState<null | boolean>(null);
   const location = useLocation();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setAuthenticated(!!session);
-      setLoading(false);
-    };
-    
-    checkAuth();
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setAuthenticated(!!session);
-      setLoading(false);
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(!!data.session);
     });
-
-    return () => {
-      subscription.unsubscribe();
-    };
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(!!session);
+      }
+    );
+    
+    return () => subscription.unsubscribe();
   }, []);
 
-  if (loading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  // Show loading state
+  if (session === null) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
   }
-
-  if (!authenticated) {
-    return <Navigate to="/" state={{ from: location }} replace />;
+  
+  if (!session) {
+    return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;
 };
 
-const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-  const [loading, setLoading] = useState(true);
-  const [authenticated, setAuthenticated] = useState(false);
+// Redirect authenticated users away from auth pages
+const UnauthRoute = ({ children }: { children: React.ReactNode }) => {
+  const [session, setSession] = useState<null | boolean>(null);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setAuthenticated(!!session);
-      setLoading(false);
-    };
-    
-    checkAuth();
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setAuthenticated(!!session);
-      setLoading(false);
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(!!data.session);
     });
-
-    return () => {
-      subscription.unsubscribe();
-    };
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(!!session);
+      }
+    );
+    
+    return () => subscription.unsubscribe();
   }, []);
 
-  if (loading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  // Show loading state
+  if (session === null) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
   }
-
-  if (authenticated) {
+  
+  if (session) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -129,24 +130,24 @@ function App() {
           <Toaster />
           <Routes>
             <Route path="/" element={
-              <PublicRoute>
+              <UnauthRoute>
                 <IndexPage />
-              </PublicRoute>
+              </UnauthRoute>
             } />
-            <Route path="/index" element={
-              <PublicRoute>
-                <IndexPage />
-              </PublicRoute>
+            <Route path="/auth" element={
+              <UnauthRoute>
+                <Auth />
+              </UnauthRoute>
             } />
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             
             <Route path="/" element={
-              <ProtectedRoute>
+              <AuthRoute>
                 <DefaultLayoutWrapper>
                   <DashboardLayout />
                 </DefaultLayoutWrapper>
-              </ProtectedRoute>
+              </AuthRoute>
             }>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/customers" element={<Customers />} />
