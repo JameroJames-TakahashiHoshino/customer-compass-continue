@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +21,7 @@ import Analytics from "@/pages/Analytics";
 import Settings from "@/pages/Settings";
 import { Toaster } from "@/components/ui/sonner";
 import { DefaultLayoutWrapper } from "@/layouts/DefaultLayout";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 
 // Import SalesDetail
 import SalesDetail from "@/pages/SalesDetail";
@@ -122,49 +124,49 @@ function App() {
 
   return (
     <Router>
-      <div className="w-full">
-        <Toaster />
-        <Routes>
-          <Route path="/" element={
-            <PublicRoute>
-              <IndexPage />
-            </PublicRoute>
-          } />
-          <Route path="/index" element={
-            <PublicRoute>
-              <IndexPage />
-            </PublicRoute>
-          } />
-          <Route path="/admin-login" element={<AdminLogin />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          
-          <Route path="/" element={
-            <ProtectedRoute>
-              <DefaultLayoutWrapper>
-                <DashboardLayout>
-                  {/* Outlet will be rendered here */}
-                </DashboardLayout>
-              </DefaultLayoutWrapper>
-            </ProtectedRoute>
-          }>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/customers" element={<Customers />} />
-            <Route path="/customers/:id" element={<CustomerDetail />} />
-            <Route path="/customers/new" element={<AddCustomer />} />
-            <Route path="/sales" element={<Sales />} />
-            <Route path="/sales-detail/:id" element={<SalesDetail />} />
-            <Route path="/payments" element={<Payments />} />
-            <Route path="/help" element={<Help />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/calendar" element={<Calendar />} />
-            <Route path="/messages" element={<Messages />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/settings" element={<Settings />} />
-          </Route>
-          
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </div>
+      <NotificationProvider>
+        <div className="w-full">
+          <Toaster />
+          <Routes>
+            <Route path="/" element={
+              <PublicRoute>
+                <IndexPage />
+              </PublicRoute>
+            } />
+            <Route path="/index" element={
+              <PublicRoute>
+                <IndexPage />
+              </PublicRoute>
+            } />
+            <Route path="/admin-login" element={<AdminLogin />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            
+            <Route path="/" element={
+              <ProtectedRoute>
+                <DefaultLayoutWrapper>
+                  <DashboardLayout />
+                </DefaultLayoutWrapper>
+              </ProtectedRoute>
+            }>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/customers" element={<Customers />} />
+              <Route path="/customers/:id" element={<CustomerDetail />} />
+              <Route path="/customers/new" element={<AddCustomer />} />
+              <Route path="/sales" element={<Sales />} />
+              <Route path="/sales-detail/:id" element={<SalesDetail />} />
+              <Route path="/payments" element={<Payments />} />
+              <Route path="/help" element={<Help />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/calendar" element={<Calendar />} />
+              <Route path="/messages" element={<Messages />} />
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/settings" element={<Settings />} />
+            </Route>
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </div>
+      </NotificationProvider>
     </Router>
   );
 }
