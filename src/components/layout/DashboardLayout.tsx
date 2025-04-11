@@ -1,6 +1,6 @@
 
-import { Navbar } from "../Navbar";  // Adjust the import path
-import { Sidebar } from "../Sidebar"; // Adjust the import path
+import { Navbar } from "@/components/Navbar";  
+import { Sidebar } from "@/components/Sidebar"; 
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (

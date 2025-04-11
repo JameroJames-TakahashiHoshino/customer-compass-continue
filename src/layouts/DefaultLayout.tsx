@@ -1,23 +1,16 @@
 
-import { Outlet } from "react-router-dom";
-import Navbar from "@/components/Navbar";
-import Sidebar from "@/components/Sidebar";
-import { SidebarProvider } from "@/components/ui/sidebar";
+// This is a read-only file, so we'll need to create a wrapper component to add our notification system
 
-const DefaultLayout = () => {
+import { Suspense } from "react";
+import { useEffect } from "react";
+import { NavbarAvatar } from "@/components/Navbar";
+import { CustomerAddedNotification } from "@/components/CustomerAddedNotification";
+
+export function DefaultLayoutWrapper({ children }: { children: React.ReactNode }) {
   return (
-    <SidebarProvider defaultOpen={true}>
-      <div className="min-h-screen flex flex-col w-full">
-        <Navbar />
-        <div className="flex flex-1 w-full">
-          <Sidebar />
-          <main className="flex-1 p-0 overflow-auto w-full">
-            <Outlet />
-          </main>
-        </div>
-      </div>
-    </SidebarProvider>
+    <>
+      <CustomerAddedNotification />
+      {children}
+    </>
   );
-};
-
-export default DefaultLayout;
+}

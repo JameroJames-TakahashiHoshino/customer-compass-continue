@@ -19,6 +19,8 @@ import Calendar from "@/pages/Calendar";
 import Messages from "@/pages/Messages";
 import Analytics from "@/pages/Analytics";
 import Settings from "@/pages/Settings";
+import { Toaster } from "@/components/ui/sonner";
+import { DefaultLayoutWrapper } from "@/layouts/DefaultLayout";
 
 // Import SalesDetail
 import SalesDetail from "@/pages/SalesDetail";
@@ -123,6 +125,7 @@ function App() {
   return (
     <Router>
       <div className="w-full">
+        <Toaster />
         <Routes>
           <Route path="/" element={
             <PublicRoute>
@@ -139,7 +142,9 @@ function App() {
           
           <Route element={
             <ProtectedRoute>
-              <DefaultLayout />
+              <DefaultLayoutWrapper>
+                <DefaultLayout />
+              </DefaultLayoutWrapper>
             </ProtectedRoute>
           }>
             <Route path="/dashboard" element={<Dashboard />} />

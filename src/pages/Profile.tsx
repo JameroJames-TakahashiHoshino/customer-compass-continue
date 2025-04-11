@@ -8,7 +8,18 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { toast } from "sonner";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2, Upload, Trash } from "lucide-react";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const Profile = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -19,6 +30,7 @@ const Profile = () => {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -133,6 +145,50 @@ const Profile = () => {
     }
   };
 
+  const handleDeleteAvatar = async () => {
+    if (!user) return;
+    
+    setUpdating(true);
+    try {
+      // If there's an existing avatar URL, extract the file path
+      if (avatarUrl && avatarUrl.includes('avatars/')) {
+        const urlParts = avatarUrl.split('/');
+        const fileName = urlParts[urlParts.length - 1];
+        const filePath = `avatars/${fileName}`;
+        
+        // Delete the file from storage
+        const { error } = await supabase.storage
+          .from('avatars')
+          .remove([filePath]);
+          
+        if (error) throw error;
+      }
+
+      // Update user metadata to remove avatar_url
+      const { error, data } = await supabase.auth.updateUser({
+        data: { 
+          name,
+          avatar_url: null
+        }
+      });
+
+      if (error) throw error;
+      
+      // Update local state
+      if (data.user) {
+        setUser(data.user);
+        setAvatarUrl(null);
+      }
+      
+      toast.success("Profile photo deleted successfully");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete profile photo");
+    } finally {
+      setUpdating(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-3.5rem)]">
@@ -154,7 +210,7 @@ const Profile = () => {
                   <AvatarImage src={avatarUrl || "/placeholder.svg"} alt="Profile" />
                   <AvatarFallback>{name.charAt(0) || email.charAt(0)}</AvatarFallback>
                 </Avatar>
-                <div className="absolute bottom-0 right-0">
+                <div className="absolute bottom-0 right-0 flex gap-1">
                   <Label htmlFor="avatar-upload" className="cursor-pointer">
                     <div className="bg-primary text-primary-foreground p-1 rounded-full hover:bg-primary/90 transition-colors">
                       <Upload className="h-4 w-4" />
@@ -167,6 +223,27 @@ const Profile = () => {
                       className="hidden"
                     />
                   </Label>
+                  {avatarUrl && (
+                    <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="icon" className="h-6 w-6 rounded-full p-1">
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Profile Photo</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete your profile photo? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleDeleteAvatar}>Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </div>
               </div>
               <div>
