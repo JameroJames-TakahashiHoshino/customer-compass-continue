@@ -2,7 +2,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface AuthContextType {
   session: Session | null;
@@ -18,6 +18,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -29,9 +30,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Redirect based on auth state
         if (session) {
-          navigate('/dashboard');
+          // Don't navigate if already on dashboard or other protected pages
+          if (location.pathname === '/' || location.pathname === '/auth') {
+            navigate('/dashboard');
+          }
         } else {
-          navigate('/auth');
+          // Only redirect to auth if not already there
+          if (location.pathname !== '/auth' && location.pathname !== '/') {
+            navigate('/auth');
+          }
         }
       }
     );
@@ -41,10 +48,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      
+      // Initial navigation based on session
+      if (session) {
+        if (location.pathname === '/' || location.pathname === '/auth') {
+          navigate('/dashboard');
+        }
+      } else {
+        if (location.pathname !== '/auth' && location.pathname !== '/') {
+          navigate('/auth');
+        }
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, location.pathname]);
 
   const signOut = async () => {
     await supabase.auth.signOut();

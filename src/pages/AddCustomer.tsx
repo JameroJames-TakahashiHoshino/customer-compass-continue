@@ -8,10 +8,14 @@ const AddCustomer = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
-  const handleSuccess = (customerNo: string) => {
+  const handleSuccess = (customerNo?: string) => {
     setIsSubmitting(false);
-    toast.success(`Customer ${customerNo} added successfully`);
-    navigate(`/customers/${customerNo}`);
+    toast.success(`Customer ${customerNo || ''} added successfully`);
+    if (customerNo) {
+      navigate(`/customers/${customerNo}`);
+    } else {
+      navigate('/customers');
+    }
   };
 
   const handleError = (error: any) => {
