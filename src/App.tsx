@@ -18,13 +18,14 @@ import NotFound from "@/pages/NotFound";
 import AddCustomer from "@/pages/AddCustomer";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-// Create a client
-const queryClient = new QueryClient();
-
+// Create a client (moved inside the component)
 function App() {
+  // Create QueryClient inside the component
+  const queryClient = new QueryClient();
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <Router>
+    <Router>
+      <QueryClientProvider client={queryClient}>
         <div className="w-full">
           <Toaster />
           <Routes>
@@ -55,8 +56,8 @@ function App() {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
-      </Router>
-    </QueryClientProvider>
+      </QueryClientProvider>
+    </Router>
   );
 }
 

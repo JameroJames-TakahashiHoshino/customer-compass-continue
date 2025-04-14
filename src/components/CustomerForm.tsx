@@ -18,10 +18,18 @@ interface CustomerFormProps {
     payterm?: string;
   };
   isEditing?: boolean;
-  onSuccess?: () => void;
+  onSubmitStart?: () => void;
+  onSuccess?: (customerNo?: string) => void;
+  onError?: (error: any) => void;
 }
 
-const CustomerForm = ({ defaultValues, isEditing = false, onSuccess }: CustomerFormProps) => {
+const CustomerForm = ({ 
+  defaultValues, 
+  isEditing = false, 
+  onSuccess,
+  onSubmitStart,
+  onError
+}: CustomerFormProps) => {
   const navigate = useNavigate();
   const { addNotification } = useNotifications();
   
@@ -45,6 +53,11 @@ const CustomerForm = ({ defaultValues, isEditing = false, onSuccess }: CustomerF
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
+    
+    // Call onSubmitStart if provided
+    if (onSubmitStart) {
+      onSubmitStart();
+    }
     
     try {
       if (isEditing) {
@@ -86,11 +99,21 @@ const CustomerForm = ({ defaultValues, isEditing = false, onSuccess }: CustomerF
         // Add notification
         addNotification(`New customer added: ${formData.custname || formData.custno}`);
         
-        navigate("/customers");
+        // Call onSuccess with the customer number if provided
+        if (onSuccess) {
+          onSuccess(formData.custno);
+        } else {
+          navigate("/customers");
+        }
       }
     } catch (error: any) {
       toast.error(error.message || "An error occurred");
       console.error("Error:", error);
+      
+      // Call onError if provided
+      if (onError) {
+        onError(error);
+      }
     } finally {
       setLoading(false);
     }
