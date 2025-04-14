@@ -27,7 +27,7 @@ const AddCustomer = () => {
     <div className="w-full py-6 px-4">
       <h1 className="text-3xl font-bold mb-6">Add New Customer</h1>
       <CustomerForm 
-        onSubmitting={() => setIsSubmitting(true)} 
+        onSubmitStart={() => setIsSubmitting(true)} 
         onSuccess={handleSuccess}
         onError={handleError}
       />

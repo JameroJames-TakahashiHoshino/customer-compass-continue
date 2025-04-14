@@ -16,41 +16,47 @@ import Settings from "@/pages/Settings";
 import Help from "@/pages/Help";
 import NotFound from "@/pages/NotFound";
 import AddCustomer from "@/pages/AddCustomer";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+// Create a client
+const queryClient = new QueryClient();
 
 function App() {
   return (
-    <Router>
-      <div className="w-full">
-        <Toaster />
-        <Routes>
-          <Route path="/" element={<IndexPage />} />
-          <Route path="/auth" element={<AuthPage />} />
-          
-          <Route 
-            element={
-              <AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <div className="w-full">
+          <Toaster />
+          <Routes>
+            <Route path="/" element={<IndexPage />} />
+            <Route path="/auth" element={<AuthPage />} />
+            
+            <Route 
+              element={
                 <NotificationProvider>
                   <DefaultLayoutWrapper>
-                    <DashboardLayout />
+                    <AuthProvider>
+                      <DashboardLayout />
+                    </AuthProvider>
                   </DefaultLayoutWrapper>
                 </NotificationProvider>
-              </AuthProvider>
-            }
-          >
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/customers" element={<Customers />} />
-            <Route path="/customers/add" element={<AddCustomer />} />
-            <Route path="/sales" element={<Sales />} />
-            <Route path="/payments" element={<Payments />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/help" element={<Help />} />
-          </Route>
-          
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </div>
-    </Router>
+              }
+            >
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/customers" element={<Customers />} />
+              <Route path="/customers/add" element={<AddCustomer />} />
+              <Route path="/sales" element={<Sales />} />
+              <Route path="/payments" element={<Payments />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/help" element={<Help />} />
+            </Route>
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </div>
+      </Router>
+    </QueryClientProvider>
   );
 }
 
